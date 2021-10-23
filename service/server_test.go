@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -69,6 +70,84 @@ func TestNamespaceHandlerDelete(t *testing.T) {
 	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
 
 	req, _ := http.NewRequest("DELETE", "/ns/test", nil)
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusAccepted, response.Code)
+
+	expected := `{}`
+	if body := response.Body.String(); body != expected {
+		t.Errorf("Expected %v got %s", expected, body)
+	}
+}
+
+func TestKeyValueHandlerPost(t *testing.T) {
+	json := `{"name":"jack"}`
+
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(KeyValuePattern, server.keyvalueHandler)
+
+	req, _ := http.NewRequest("POST", "/ns/test/1", strings.NewReader(json))
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusCreated, response.Code)
+
+	if body := response.Body.String(); body != json {
+		t.Errorf("Expected %v got %s", json, body)
+	}
+
+	value, err := mockDb.Get("test", "1")
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	if string(value) != json {
+		t.Errorf("Expected %v got %s", json, string(value))
+	}
+}
+
+func TestKeyValueHandlerGet(t *testing.T) {
+	json := `{"name":"jack"}`
+
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+	mockDb.Upsert("test", "1", []byte(json))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(KeyValuePattern, server.keyvalueHandler)
+
+	req, _ := http.NewRequest("GET", "/ns/test/1", nil)
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusOK, response.Code)
+
+	if body := response.Body.String(); body != json {
+		t.Errorf("Expected %v got %s", json, body)
+	}
+}
+
+func TestKeyValueHandlerDelete(t *testing.T) {
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+	mockDb.Upsert("test", "1", []byte(`{"name":"jack"}`))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(KeyValuePattern, server.keyvalueHandler)
+
+	req, _ := http.NewRequest("DELETE", "/ns/test/1", nil)
 	response := testingRouter.ExecuteRequest(req)
 
 	testingRouter.CheckResponseCode(t, http.StatusAccepted, response.Code)
