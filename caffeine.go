@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	addr := flag.String("ip_port", "127.0.0.1:8000", "ip:port to expose")
+	addr := flag.String("ip_port", ":8000", "ip:port to expose")
 	flag.Parse()
 
 	server := service.Server{

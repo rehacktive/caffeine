@@ -13,7 +13,7 @@ Features:
 Simply start the server with:
 
 ```go 
-go run main.go
+go run caffeine.go
 ```
 optionally provide -ip_port param, default is `127.0.0.1:8000`
 
@@ -74,4 +74,14 @@ Search by property (jq syntax)
 ```sh
 > curl http://localhost:8000/search/users?filter="select(.name==\"jack\")" 
 {"results":[{"1":{"age":25,"name":"jack"}}]}
+```
+
+### Run as container
+
+```sh
+> docker build -t caffeine .
+```
+and then run it:
+```sh
+> docker run --publish 8000:8000 caffeine
 ```
