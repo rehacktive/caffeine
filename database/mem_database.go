@@ -24,7 +24,7 @@ func (mb *MemDatabase) Init() {
 	mb.namespaces = make(map[string]namespace)
 }
 
-func (mb *MemDatabase) Upsert(namespace string, key string, value []byte) (bool, error) {
+func (mb *MemDatabase) Upsert(namespace string, key string, value []byte) error {
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
@@ -34,7 +34,7 @@ func (mb *MemDatabase) Upsert(namespace string, key string, value []byte) (bool,
 		mb.namespaces[namespace] = ns
 	}
 	ns.data[key] = value
-	return true, nil
+	return nil
 }
 
 func (mb *MemDatabase) Get(namespace string, key string) ([]byte, error) {
@@ -57,28 +57,28 @@ func (mb *MemDatabase) GetAll(namespace string) (map[string][]byte, error) {
 	return ns.data, nil
 }
 
-func (mb *MemDatabase) Delete(namespace string, key string) (bool, error) {
+func (mb *MemDatabase) Delete(namespace string, key string) error {
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
 	ns, ok := mb.namespaces[namespace]
 	if !ok {
-		return false, errors.New("not found")
+		return errors.New("not found")
 	}
 	delete(ns.data, key)
-	return true, nil
+	return nil
 }
 
-func (mb *MemDatabase) DeleteAll(namespace string) (bool, error) {
+func (mb *MemDatabase) DeleteAll(namespace string) error {
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
 	_, ok := mb.namespaces[namespace]
 	if !ok {
-		return false, errors.New("not found")
+		return errors.New("not found")
 	}
 	delete(mb.namespaces, namespace)
-	return true, nil
+	return nil
 }
 
 func (mb *MemDatabase) GetNamespaces() []string {

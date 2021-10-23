@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/rehacktive/mvb/database"
+	"github.com/rehacktive/caffeine/database"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	}
 	go server.Init(&database.MemDatabase{})
 
-	log.Println("mvb server started at " + server.address)
+	log.Println("caffeine server started at " + server.address)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)

@@ -13,12 +13,12 @@ import (
 
 type Database interface {
 	Init()
-	Upsert(namespace string, key string, value []byte) (bool, error) // POST /{namespace}/{key} body: value
-	Get(namespace string, key string) ([]byte, error)                // GET /{namespace}/{key} return: value
-	GetAll(namespace string) (map[string][]byte, error)              // GET /{namespace} return key/value map
-	Delete(namespace string, key string) (bool, error)               // DELETE /{namespace}/{id}
-	DeleteAll(namespace string) (bool, error)                        // DELETE /{namespace}
-	GetNamespaces() []string                                         // GET /
+	Upsert(namespace string, key string, value []byte) error // POST /{namespace}/{key} body: value
+	Get(namespace string, key string) ([]byte, error)        // GET /{namespace}/{key} return: value
+	GetAll(namespace string) (map[string][]byte, error)      // GET /{namespace} return key/value map
+	Delete(namespace string, key string) error               // DELETE /{namespace}/{id}
+	DeleteAll(namespace string) error                        // DELETE /{namespace}
+	GetNamespaces() []string                                 // GET /
 }
 
 type Server struct {
@@ -50,31 +50,36 @@ func (s *Server) Init(db Database) {
 func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	namespaces, err := jsonWrapper(s.db.GetNamespaces())
 	if err != nil {
-		respondWithError(w, 400, err.Error())
+		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	respondWithJSON(w, http.StatusOK, string(namespaces))
 }
 
 func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	namespace := vars["namespace"]
+
 	switch r.Method {
 	case "GET":
-		vars := mux.Vars(r)
-		data, err := s.db.GetAll(vars["namespace"])
+		data, err := s.db.GetAll(namespace)
 		if err != nil {
-			respondWithError(w, 400, err.Error())
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		namespace, err := jsonWrapper(data)
+		namespaceData, err := jsonWrapper(data)
 		if err != nil {
-			respondWithError(w, 400, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondWithJSON(w, http.StatusOK, string(namespace))
+		respondWithJSON(w, http.StatusOK, string(namespaceData))
 
 	case "DELETE":
-		// call s.db.deleteAll()
-		respondWithError(w, 400, "to be implemented")
+		err := s.db.DeleteAll(namespace)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+		}
+		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
 }
 
@@ -82,37 +87,41 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
 	key := vars["key"]
+
 	switch r.Method {
 	case "POST":
 		defer r.Body.Close()
 		r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			respondWithError(w, 400, err.Error())
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		var parsed interface{}
 		err = json.Unmarshal(data, &parsed)
 		if err != nil {
-			respondWithError(w, 400, err.Error())
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		ok, err := s.db.Upsert(namespace, key, data)
-		if !ok || err != nil {
-			respondWithError(w, 400, err.Error())
+		err = s.db.Upsert(namespace, key, data)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		respondWithJSON(w, http.StatusOK, string(data))
+		respondWithJSON(w, http.StatusCreated, string(data))
 	case "GET":
 		data, err := s.db.Get(namespace, key)
 		if err != nil {
-			respondWithError(w, 400, err.Error())
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
 	case "DELETE":
-		// call s.db.delete()
-		respondWithError(w, 400, "to be implemented")
+		err := s.db.Delete(namespace, key)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+		}
+		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
 }
 
@@ -129,18 +138,18 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		query, err := gojq.Parse(vars["filter"])
 		if err != nil {
-			log.Fatalln(err)
+			respondWithError(w, http.StatusBadRequest, err.Error())
 		}
 		data, err := s.db.GetAll(vars["namespace"])
 		if err != nil {
-			respondWithError(w, 400, err.Error())
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		for key, value := range data {
 			var jsonContent map[string]interface{}
 			err := json.Unmarshal(value, &jsonContent)
 			if err != nil {
-				respondWithError(w, 400, err.Error())
+				respondWithError(w, http.StatusInternalServerError, err.Error())
 			}
 			iter := query.Run(jsonContent)
 			for {
@@ -149,7 +158,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				if err, ok := v.(error); ok {
-					respondWithError(w, 400, err.Error())
+					respondWithError(w, http.StatusInternalServerError, err.Error())
 				}
 				result.Results = append(result.Results, map[string]interface{}{key: v})
 			}
