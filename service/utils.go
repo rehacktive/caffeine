@@ -34,7 +34,7 @@ func jsonWrapper(payload interface{}) (content []byte, err error) {
 		if err != nil {
 			return
 		}
-		r = append(r, map[string]interface{}{k: parsed})
+		r = append(r, map[string]interface{}{"key": k, "value": parsed})
 	}
 	content, err = json.Marshal(r)
 	return

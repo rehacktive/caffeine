@@ -15,7 +15,7 @@ Simply start the server with:
 ```go 
 go run caffeine.go
 ```
-optionally provide -ip_port param, default is `127.0.0.1:8000`
+optionally provide -ip_port param, default is `:8000`
 
 Store a new "user" with an ID and some json data:
 
@@ -54,8 +54,23 @@ Get by ID
 
 Get all values for a namespace
 ```sh
-> curl http://localhost:8000/ns/users
-[{"1":{"age":25,"name":"jack"}},{"2":{"age":30,"name":"john"}}]
+> curl http://localhost:8000/ns/users | jq 
+[
+  {
+    "key": "2",
+    "value": {
+      "age": 25,
+      "name": "john"
+    }
+  },
+  {
+    "key": "1",
+    "value": {
+      "age": 25,
+      "name": "jack"
+    }
+  }
+]
 ```
 
 Get all namespaces
@@ -72,8 +87,18 @@ Delete a namespace
 
 Search by property (jq syntax)
 ```sh
-> curl http://localhost:8000/search/users?filter="select(.name==\"jack\")" 
-{"results":[{"1":{"age":25,"name":"jack"}}]}
+> curl http://localhost:8000/search/users?filter="select(.name==\"jack\")"  | jq
+{
+  "results": [
+    {
+      "key": "1",
+      "value": {
+        "age": 25,
+        "name": "jack"
+      }
+    }
+  ]
+}}]}
 ```
 
 ## Run as container

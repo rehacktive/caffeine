@@ -164,7 +164,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 					log.Println("error on query", err)
 					respondWithError(w, http.StatusInternalServerError, err.Error())
 				}
-				result.Results = append(result.Results, map[string]interface{}{key: v})
+				result.Results = append(result.Results, map[string]interface{}{"key": key, "value": v})
 			}
 		}
 		jsonResponse, _ := json.Marshal(result)
