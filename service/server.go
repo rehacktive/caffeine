@@ -13,13 +13,19 @@ import (
 
 type Database interface {
 	Init()
-	Upsert(namespace string, key string, value []byte) error // POST /{namespace}/{key} body: value
-	Get(namespace string, key string) ([]byte, error)        // GET /{namespace}/{key} return: value
-	GetAll(namespace string) (map[string][]byte, error)      // GET /{namespace} return key/value map
-	Delete(namespace string, key string) error               // DELETE /{namespace}/{id}
-	DeleteAll(namespace string) error                        // DELETE /{namespace}
-	GetNamespaces() []string                                 // GET /
+	Upsert(namespace string, key string, value []byte) error
+	Get(namespace string, key string) ([]byte, error)
+	GetAll(namespace string) (map[string][]byte, error)
+	Delete(namespace string, key string) error
+	DeleteAll(namespace string) error
+	GetNamespaces() []string
 }
+
+const (
+	NamespacePattern = "/ns/{namespace:[a-zA-Z0-9]+}"
+	KeyValuePattern  = "/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}"
+	SearchPattern    = "/search/{namespace:[a-zA-Z0-9]+}"
+)
 
 type Server struct {
 	Address string
@@ -33,9 +39,9 @@ func (s *Server) Init(db Database) {
 
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/ns", s.homeHandler).Methods(http.MethodGet, http.MethodOptions)
-	s.router.HandleFunc("/ns/{namespace:[a-zA-Z0-9]+}", s.namespaceHandler).Methods(http.MethodGet, http.MethodDelete, http.MethodOptions)
-	s.router.HandleFunc("/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}", s.keyvalueHandler).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
-	s.router.HandleFunc("/search/{namespace:[a-zA-Z0-9]+}", s.searchHandler).Queries("filter", "{filter}").Methods(http.MethodGet, http.MethodOptions)
+	s.router.HandleFunc(NamespacePattern, s.namespaceHandler).Methods(http.MethodGet, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}").Methods(http.MethodGet, http.MethodOptions)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
@@ -145,7 +151,6 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	result := Result{
 		Results: make([]interface{}, 0),
 	}
-	log.Println("search")
 
 	switch r.Method {
 	case "GET":
