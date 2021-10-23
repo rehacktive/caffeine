@@ -4,11 +4,11 @@ A very basic REST service for JSON data - enough for prototyping and MVPs!
 
 Features:
 - no need to set up a database, all data in memory
-- REST paradigm CRUD for multiple entities
-- sesrch using jq like syntax
+- REST paradigm CRUD for multiple entities/namespaces
+- search using jq like syntax (see https://stedolan.github.io/jq/manual/)
 - easy to deploy as container
 
-### How to
+## How to
 
 Simply start the server with:
 
@@ -33,7 +33,7 @@ retrieve later with:
 {"name":"jack","age":25}
 ```
 
-### All operations
+## All operations
 
 Insert/update
 ```sh
@@ -76,7 +76,7 @@ Search by property (jq syntax)
 {"results":[{"1":{"age":25,"name":"jack"}}]}
 ```
 
-### Run as container
+## Run as container
 
 ```sh
 > docker build -t caffeine .
