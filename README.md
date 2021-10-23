@@ -21,9 +21,7 @@ optionally provide -ip_port param, default is `:8000`
 Store a new "user" with an ID and some json data:
 
 ```sh
-curl -X POST -d '{"name":"jack","age":25}'  http://localhost:8000/ns/users/1
-```
-```sh
+> curl -X POST -d '{"name":"jack","age":25}'  http://localhost:8000/ns/users/1
 {"name":"jack","age":25}
 ```
 
