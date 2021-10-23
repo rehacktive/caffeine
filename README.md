@@ -98,7 +98,7 @@ Search by property (jq syntax)
       }
     }
   ]
-}}]}
+}
 ```
 
 ## Run as container
