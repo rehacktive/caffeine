@@ -32,10 +32,11 @@ func (s *Server) Init(db Database) {
 	s.db.Init()
 
 	s.router = mux.NewRouter()
-	s.router.HandleFunc("/ns", s.homeHandler)
-	s.router.HandleFunc("/ns/{namespace:[a-zA-Z0-9]+}", s.namespaceHandler)
-	s.router.HandleFunc("/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}", s.keyvalueHandler)
-	s.router.HandleFunc("/search/{namespace:[a-zA-Z0-9]+}", s.searchHandler).Queries("filter", "{filter}")
+	s.router.HandleFunc("/ns", s.homeHandler).Methods(http.MethodGet, http.MethodOptions)
+	s.router.HandleFunc("/ns/{namespace:[a-zA-Z0-9]+}", s.namespaceHandler).Methods(http.MethodGet, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc("/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}", s.keyvalueHandler).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc("/search/{namespace:[a-zA-Z0-9]+}", s.searchHandler).Queries("filter", "{filter}").Methods(http.MethodGet, http.MethodOptions)
+	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
 		Handler:      s.router,
@@ -57,6 +58,10 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
 
@@ -84,6 +89,10 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
 	key := vars["key"]
@@ -126,6 +135,10 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
 	type Result struct {
 		Results []interface{} `json:"results"`
 	}

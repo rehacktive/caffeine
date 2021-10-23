@@ -6,6 +6,7 @@ Features:
 - no need to set up a database, all data in memory
 - REST paradigm CRUD for multiple entities/namespaces
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
+- CORS enabled
 - easy to deploy as container
 
 ## How to
@@ -20,7 +21,9 @@ optionally provide -ip_port param, default is `:8000`
 Store a new "user" with an ID and some json data:
 
 ```sh
-> curl -X POST -d '{"name":"jack","age":25}'  http://localhost:8000/ns/users/1
+curl -X POST -d '{"name":"jack","age":25}'  http://localhost:8000/ns/users/1
+```
+```sh
 {"name":"jack","age":25}
 ```
 

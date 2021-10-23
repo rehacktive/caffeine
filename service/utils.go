@@ -9,6 +9,7 @@ import (
 )
 
 func respondWithJSON(w http.ResponseWriter, code int, jsonContent string) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_, err := w.Write([]byte(jsonContent + "\n"))
