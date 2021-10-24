@@ -64,6 +64,8 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	if r.Method == http.MethodOptions {
 		return
 	}
@@ -95,6 +97,8 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	if r.Method == http.MethodOptions {
 		return
 	}
@@ -141,6 +145,8 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	if r.Method == http.MethodOptions {
 		return
 	}
