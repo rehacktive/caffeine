@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/itchyny/gojq"
+	"github.com/rs/cors"
 )
 
 type Database interface {
@@ -37,15 +38,20 @@ func (s *Server) Init(db Database) {
 	s.db = db
 	s.db.Init()
 
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},                                                // All origins
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodDelete}, // Allowing only get, just an example
+	})
+
 	s.router = mux.NewRouter()
-	s.router.HandleFunc("/ns", s.homeHandler).Methods(http.MethodGet, http.MethodOptions)
-	s.router.HandleFunc(NamespacePattern, s.namespaceHandler).Methods(http.MethodGet, http.MethodDelete, http.MethodOptions)
-	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
-	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}").Methods(http.MethodGet, http.MethodOptions)
+	s.router.HandleFunc("/ns", s.homeHandler)                                         //.Methods(http.MethodGet, http.MethodOptions)
+	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)                         //.Methods(http.MethodGet, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler)                           //.Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}") //.Methods(http.MethodGet, http.MethodOptions)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
-		Handler:      s.router,
+		Handler:      c.Handler(s.router),
 		Addr:         s.Address,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
