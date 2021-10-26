@@ -1,5 +1,5 @@
 # caffeine - minimum viable backend
-[<img src="http://www.rehacktive.net/caffeine_mug.jpg">]
+<img src="http://www.rehacktive.net/caffeine_mug.jpg" width="200">
 A very basic REST service for JSON data - enough for prototyping and MVPs!
 
 Features:
