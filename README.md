@@ -129,3 +129,9 @@ DB_TYPE=postgres PG_HOST=0.0.0.0 PG_USER=caffeine PG_PASS=mysecretpassword go ru
 ```
 
 (params can be passed as ENV variables or as command-line ones)
+
+A very quick to run both on docker with docker-compose:
+
+```sh
+docker-compose up -d
+```
