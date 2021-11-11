@@ -44,10 +44,10 @@ func (s *Server) Init(db Database) {
 	})
 
 	s.router = mux.NewRouter()
-	s.router.HandleFunc("/ns", s.homeHandler)                                         //.Methods(http.MethodGet, http.MethodOptions)
-	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)                         //.Methods(http.MethodGet, http.MethodDelete, http.MethodOptions)
-	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler)                           //.Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
-	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}") //.Methods(http.MethodGet, http.MethodOptions)
+	s.router.HandleFunc("/ns", s.homeHandler)
+	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)
+	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler)
+	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{

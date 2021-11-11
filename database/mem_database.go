@@ -38,6 +38,9 @@ func (mb *MemDatabase) Upsert(namespace string, key string, value []byte) error 
 }
 
 func (mb *MemDatabase) Get(namespace string, key string) ([]byte, error) {
+	mb.mu.Lock()
+	defer mb.mu.Unlock()
+
 	ns, ok := mb.namespaces[namespace]
 	if !ok {
 		return nil, errors.New("not found")
@@ -50,6 +53,9 @@ func (mb *MemDatabase) Get(namespace string, key string) ([]byte, error) {
 }
 
 func (mb *MemDatabase) GetAll(namespace string) (map[string][]byte, error) {
+	mb.mu.Lock()
+	defer mb.mu.Unlock()
+
 	ns, ok := mb.namespaces[namespace]
 	if !ok {
 		return nil, errors.New("not found")
@@ -82,6 +88,9 @@ func (mb *MemDatabase) DeleteAll(namespace string) error {
 }
 
 func (mb *MemDatabase) GetNamespaces() []string {
+	mb.mu.Lock()
+	defer mb.mu.Unlock()
+
 	ret := []string{}
 	for k := range mb.namespaces {
 		ret = append(ret, k)

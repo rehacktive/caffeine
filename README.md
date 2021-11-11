@@ -1,13 +1,15 @@
 # caffeine - minimum viable backend
-<img src="http://www.rehacktive.net/caffeine_mug.jpg" width="500">
 A very basic REST service for JSON data - enough for prototyping and MVPs!
 
 Features:
-- no need to set up a database, all data in memory
+- no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
 - CORS enabled
 - easy to deploy as container
+
+\* you can use an in-memory data approach with zero config or postgres as
+database, you just need an instance running, no queries/sql/worries!
 
 ## How to
 
@@ -105,9 +107,25 @@ Search by property (jq syntax)
 ## Run as container
 
 ```sh
-> docker build -t caffeine .
+docker build -t caffeine .
 ```
 and then run it:
 ```sh
-> docker run --publish 8000:8000 caffeine
+docker run --publish 8000:8000 caffeine
 ```
+
+## Run with Postgres
+
+First run an instance of Postgres (for example with docker):
+
+```sh
+docker run -e POSTGRES_USER=caffeine -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres:latest
+```
+
+Then run caffeine with the right params to connect to the db:
+
+```sh
+DB_TYPE=postgres PG_HOST=0.0.0.0 PG_USER=caffeine PG_PASS=mysecretpassword go run caffeine.go
+```
+
+(params can be passed as ENV variables or as command-line ones)
