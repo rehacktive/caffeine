@@ -11,6 +11,8 @@ Features:
 \* you can use an in-memory data approach with zero config or postgres as
 database, you just need an instance running, no queries/sql/worries!
 
+For a sample Vue app using caffeine see: https://gist.github.com/calogxro/6e601e07c2a937df4418d104fb717570
+
 ## How to
 
 Simply start the server with:
