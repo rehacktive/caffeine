@@ -111,7 +111,7 @@ Search by property (jq syntax)
 
 You can add a schema for a specific namespace, and only correct JSON data will be accepted
 
-To add a schema (available in schema_sample/):
+To add a schema for the namespace "user", use the available in schema_sample/:
 
 ```sh
 curl --data-binary @./schema_sample/user_schema.json http://localhost:8000/schema/user
