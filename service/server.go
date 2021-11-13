@@ -83,6 +83,8 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	namespace := vars["namespace"]
 
 	switch r.Method {
+	case "POST":
+		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
 	case "GET":
 		data, err := s.db.GetAll(namespace)
 		if err != nil {
