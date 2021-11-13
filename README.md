@@ -4,6 +4,7 @@ A very basic REST service for JSON data - enough for prototyping and MVPs!
 Features:
 - no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
+- schema validation
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
 - CORS enabled
 - easy to deploy as container
@@ -105,6 +106,19 @@ Search by property (jq syntax)
   ]
 }
 ```
+
+## Schema Validation
+
+You can add a schema for a specific namespace, and only correct JSON data will be accepted
+
+To add a schema (available in schema_sample/):
+
+```sh
+curl --data-binary @./schema_sample/user_schema.json http://localhost:8000/schema/user
+```
+
+Now only validated "users" will be accepted (see user.json and invalid_user.json under schema_sample/)
+
 
 ## Run as container
 
