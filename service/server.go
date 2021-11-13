@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/itchyny/gojq"
 	"github.com/rs/cors"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 type Database interface {
@@ -26,6 +27,8 @@ const (
 	NamespacePattern = "/ns/{namespace:[a-zA-Z0-9]+}"
 	KeyValuePattern  = "/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}"
 	SearchPattern    = "/search/{namespace:[a-zA-Z0-9]+}"
+	SchemaPattern    = "/schema/{namespace:[a-zA-Z0-9]+}"
+	SchemaId         = "_schema"
 )
 
 type Server struct {
@@ -48,6 +51,7 @@ func (s *Server) Init(db Database) {
 	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)
 	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler)
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
+	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
@@ -118,8 +122,7 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		var parsed interface{}
-		err = json.Unmarshal(data, &parsed)
+		err = s.validate(namespace, data)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
@@ -139,6 +142,46 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusOK, string(data))
 	case "DELETE":
 		err := s.db.Delete(namespace, key)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+		}
+		respondWithJSON(w, http.StatusAccepted, "{}")
+	}
+}
+
+func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	vars := mux.Vars(r)
+	namespace := vars["namespace"] + SchemaId
+
+	switch r.Method {
+	case "POST":
+		defer r.Body.Close()
+		r.Body = http.MaxBytesReader(w, r.Body, 1048576)
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		err = s.db.Upsert(namespace, SchemaId, data)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		respondWithJSON(w, http.StatusCreated, string(data))
+	case "GET":
+		data, err := s.db.Get(namespace, SchemaId)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		respondWithJSON(w, http.StatusOK, string(data))
+	case "DELETE":
+		err := s.db.Delete(namespace, SchemaId)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 		}
@@ -194,4 +237,39 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		jsonResponse, _ := json.Marshal(result)
 		respondWithJSON(w, http.StatusOK, string(jsonResponse))
 	}
+}
+
+// utils
+
+func (s *Server) validate(namespace string, data []byte) error {
+	// if namespace has a schema, validate against it
+	schemaJson, err := s.db.Get(namespace+SchemaId, SchemaId)
+	if err == nil {
+		log.Println("schema found. validating...")
+		schemaLoader := gojsonschema.NewBytesLoader(schemaJson)
+		documentLoader := gojsonschema.NewBytesLoader(data)
+
+		result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+		if err != nil {
+			return err
+		}
+
+		if result.Valid() {
+			log.Println("The document is valid")
+		} else {
+			log.Printf("The document is not valid. see errors :")
+			for _, desc := range result.Errors() {
+				log.Printf("- %s\n", desc)
+			}
+		}
+	} else {
+		log.Println("no schema found. validating as json...")
+		// otherwise just validate as json
+		var parsed interface{}
+		err = json.Unmarshal(data, &parsed)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
