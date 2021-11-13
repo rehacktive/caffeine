@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -172,6 +173,7 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Println("added schema for namespace " + vars["namespace"])
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case "GET":
 		data, err := s.db.Get(namespace, SchemaId)
@@ -245,7 +247,6 @@ func (s *Server) validate(namespace string, data []byte) error {
 	// if namespace has a schema, validate against it
 	schemaJson, err := s.db.Get(namespace+SchemaId, SchemaId)
 	if err == nil {
-		log.Println("schema found. validating...")
 		schemaLoader := gojsonschema.NewBytesLoader(schemaJson)
 		documentLoader := gojsonschema.NewBytesLoader(data)
 
@@ -255,19 +256,22 @@ func (s *Server) validate(namespace string, data []byte) error {
 		}
 
 		if result.Valid() {
-			log.Println("The document is valid")
+			// noop
 		} else {
-			log.Printf("The document is not valid. see errors :")
+			log.Printf("The document is not valid according to its schema. see errors :")
+			errorLog := ""
 			for _, desc := range result.Errors() {
-				log.Printf("- %s\n", desc)
+				errorLog = errorLog + desc.String()
 			}
+			log.Println(errorLog)
+			return errors.New(errorLog)
 		}
 	} else {
-		log.Println("no schema found. validating as json...")
 		// otherwise just validate as json
 		var parsed interface{}
 		err = json.Unmarshal(data, &parsed)
 		if err != nil {
+			log.Printf("The document is not valid JSON")
 			return err
 		}
 	}

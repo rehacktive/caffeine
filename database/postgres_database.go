@@ -134,7 +134,7 @@ func (p PGDatabase) GetNamespaces() []string {
 }
 
 func (p PGDatabase) ensureNamespace(namespace string) (err error) {
-	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS '%v' ( id text PRIMARY KEY, data json NOT NULL)", namespace)
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v ( id text PRIMARY KEY, data json NOT NULL)", namespace)
 	_, err = p.db.Exec(query)
 
 	if err != nil {
