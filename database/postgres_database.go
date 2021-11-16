@@ -11,12 +11,12 @@ import (
 const (
 	dbName             = "caffeine"
 	dbPort             = 5432
-	insertQuery        = "INSERT INTO %v (id, data) VALUES('%v','%v') ON CONFLICT (id) DO UPDATE SET data = '%v'"
-	tablesQuery        = "SELECT table_name FROM information_schema.tables WHERE table_schema='public';"
-	getQuery           = "SELECT data FROM %v WHERE id='%v';"
-	getAllQuery        = "SELECT id,data FROM %v;"
-	deleteQuery        = "DELETE FROM %v WHERE id='%v';"
-	dropNamespaceQuery = "DROP TABLE %v;"
+	insertQuery        = "INSERT INTO %v (id, data) VALUES($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2"
+	tablesQuery        = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+	getQuery           = "SELECT data FROM %v WHERE id = $1"
+	getAllQuery        = "SELECT id, data FROM %v"
+	deleteQuery        = "DELETE FROM %v WHERE id = $1"
+	dropNamespaceQuery = "DROP TABLE %v"
 )
 
 type PGDatabase struct {
@@ -47,8 +47,7 @@ func (p PGDatabase) Upsert(namespace string, key string, value []byte) (err erro
 	if err != nil {
 		return
 	}
-	sqlStatement := fmt.Sprintf(insertQuery, namespace, key, string(value), string(value))
-	_, err = p.db.Exec(sqlStatement)
+	_, err = p.db.Exec(fmt.Sprintf(insertQuery, namespace), key, string(value))
 	if err != nil {
 		log.Println("error on Upsert: ", err)
 	}
@@ -56,8 +55,7 @@ func (p PGDatabase) Upsert(namespace string, key string, value []byte) (err erro
 }
 
 func (p PGDatabase) Get(namespace string, key string) ([]byte, error) {
-	sqlStatement := fmt.Sprintf(getQuery, namespace, key)
-	rows, err := p.db.Query(sqlStatement)
+	rows, err := p.db.Query(fmt.Sprintf(getQuery, namespace), key)
 	if err != nil {
 		log.Println("error on Get: ", err)
 		return nil, err
@@ -97,8 +95,7 @@ func (p PGDatabase) GetAll(namespace string) (map[string][]byte, error) {
 }
 
 func (p PGDatabase) Delete(namespace string, key string) error {
-	sqlStatement := fmt.Sprintf(deleteQuery, namespace, key)
-	_, err := p.db.Exec(sqlStatement)
+	_, err := p.db.Exec(fmt.Sprintf(deleteQuery, namespace), key)
 	if err != nil {
 		log.Println("error on Delete: ", err)
 		return err
