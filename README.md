@@ -1,13 +1,18 @@
 # caffeine - minimum viable backend
-
 A very basic REST service for JSON data - enough for prototyping and MVPs!
 
 Features:
-- no need to set up a database, all data in memory
+- no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
+- schema validation
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
 - CORS enabled
 - easy to deploy as container
+
+\* you can use an in-memory data approach with zero config or postgres as
+database, you just need an instance running, no queries/sql/worries!
+
+For a sample Vue app using caffeine see: https://gist.github.com/calogxro/6e601e07c2a937df4418d104fb717570
 
 ## How to
 
@@ -102,12 +107,47 @@ Search by property (jq syntax)
 }
 ```
 
+## Schema Validation
+
+You can add a schema for a specific namespace, and only correct JSON data will be accepted
+
+To add a schema for the namespace "user", use the one available in schema_sample/:
+
+```sh
+curl --data-binary @./schema_sample/user_schema.json http://localhost:8000/schema/user
+```
+
+Now only validated "users" will be accepted (see user.json and invalid_user.json under schema_sample/)
+
+
 ## Run as container
 
 ```sh
-> docker build -t caffeine .
+docker build -t caffeine .
 ```
 and then run it:
 ```sh
-> docker run --publish 8000:8000 caffeine
+docker run --publish 8000:8000 caffeine
+```
+
+## Run with Postgres
+
+First run an instance of Postgres (for example with docker):
+
+```sh
+docker run -e POSTGRES_USER=caffeine -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres:latest
+```
+
+Then run caffeine with the right params to connect to the db:
+
+```sh
+DB_TYPE=postgres PG_HOST=0.0.0.0 PG_USER=caffeine PG_PASS=mysecretpassword go run caffeine.go
+```
+
+(params can be passed as ENV variables or as command-line ones)
+
+A very quick to run both on docker with docker-compose:
+
+```sh
+docker-compose up -d
 ```

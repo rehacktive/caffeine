@@ -1,0 +1,36 @@
+version: "3.7"
+services:
+  database:
+    image: postgres:latest
+    restart: always
+    environment: 
+      POSTGRES_USER: "caffeine"
+      POSTGRES_PASSWORD: "password"
+    ports:
+      - "5432:5432"
+    networks:
+      - mynet
+    volumes:
+      - data:/var/lib/postgresql/data1
+  caffeine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+        DB_TYPE: postgres 
+        PG_HOST: database 
+        PG_USER: "caffeine"
+        PG_PASS: "password"
+    depends_on:
+      - database
+    networks:
+      - mynet
+    ports:
+    - "8000:8000"
+ 
+volumes:
+  data:
+
+networks:
+  mynet:
+    driver: bridge
