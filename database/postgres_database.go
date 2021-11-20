@@ -10,7 +10,6 @@ import (
 
 const (
 	dbName             = "caffeine"
-	dbPort             = 5432
 	insertQuery        = "INSERT INTO %v (id, data) VALUES($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2"
 	tablesQuery        = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
 	getQuery           = "SELECT data FROM %v WHERE id = $1"

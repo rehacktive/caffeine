@@ -32,6 +32,10 @@ const (
 	SchemaId         = "_schema"
 )
 
+var (
+	ErrInvalidArguments = errors.New("invalid arguments")
+)
+
 type Server struct {
 	Address string
 	router  *mux.Router
@@ -114,8 +118,13 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
-	namespace := vars["namespace"]
-	key := vars["key"]
+	namespace, okNs := vars["namespace"]
+	key, okKey := vars["key"]
+
+	if !okNs || !okKey {
+		respondWithError(w, http.StatusBadRequest, ErrInvalidArguments.Error())
+		return
+	}
 
 	switch r.Method {
 	case http.MethodPost:

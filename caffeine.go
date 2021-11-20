@@ -24,6 +24,7 @@ const (
 
 	MEMORY = "memory"
 	PG     = "postgres"
+	FS     = "fs"
 
 	// env
 	envHostPort = "IP_PORT"
@@ -31,15 +32,17 @@ const (
 	envPgHost   = "PG_HOST"
 	envPgUser   = "PG_USER"
 	envPgPass   = "PG_PASS"
+	envFSRoot   = "FS_ROOT"
 )
 
 func main() {
-	var addr, dbType, pgHost, pgUser, pgPass string
+	var addr, dbType, pgHost, pgUser, pgPass, fsRoot string
 	flag.StringVar(&addr, envHostPort, ":8000", "ip:port to expose")
-	flag.StringVar(&dbType, envDbType, MEMORY, "db type to use, options: memory | postgres")
+	flag.StringVar(&dbType, envDbType, MEMORY, "db type to use, options: memory | postgres | fs")
 	flag.StringVar(&pgHost, envPgHost, "0.0.0.0", "postgres host (port is 5432)")
 	flag.StringVar(&pgUser, envPgUser, "", "postgres user")
 	flag.StringVar(&pgPass, envPgPass, "", "postgres password")
+	flag.StringVar(&fsRoot, envFSRoot, "./data", "path of the file storage root")
 	flag.Parse()
 
 	server := service.Server{
@@ -56,6 +59,8 @@ func main() {
 			User: pgUser,
 			Pass: pgPass,
 		}
+	case FS:
+		db = database.NewDatabase(fsRoot)
 	}
 	go server.Init(db)
 
