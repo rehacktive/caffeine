@@ -57,6 +57,26 @@ func TestNamespaceHandlerGet(t *testing.T) {
 	}
 }
 
+func TestNamespaceHandlerGet_NotExisting(t *testing.T) {
+	json := `{"name":"jack"}`
+
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+	mockDb.Upsert("test", "1", []byte(json))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
+
+	req, _ := http.NewRequest("GET", "/ns/not_existing_ns", nil)
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusNotFound, response.Code)
+}
+
 func TestNamespaceHandlerDelete(t *testing.T) {
 	mockDb := &database.MemDatabase{}
 	mockDb.Init()
@@ -78,6 +98,24 @@ func TestNamespaceHandlerDelete(t *testing.T) {
 	if body := response.Body.String(); body != expected {
 		t.Errorf("Expected %v got %s", expected, body)
 	}
+}
+
+func TestNamespaceHandlerDelete_NotExisting(t *testing.T) {
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+	mockDb.Upsert("test", "1", []byte(`{"name":"jack","age":25}`))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
+
+	req, _ := http.NewRequest("DELETE", "/ns/not_existing_ns", nil)
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusNotFound, response.Code)
 }
 
 func TestKeyValueHandlerPost(t *testing.T) {
@@ -135,6 +173,26 @@ func TestKeyValueHandlerGet(t *testing.T) {
 	}
 }
 
+func TestKeyValueHandlerGet_NotExisting(t *testing.T) {
+	json := `{"name":"jack"}`
+
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+	mockDb.Upsert("test", "1", []byte(json))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
+
+	req, _ := http.NewRequest("GET", "/ns/test/2", nil)
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusNotFound, response.Code)
+}
+
 func TestKeyValueHandlerDelete(t *testing.T) {
 	mockDb := &database.MemDatabase{}
 	mockDb.Init()
@@ -156,6 +214,24 @@ func TestKeyValueHandlerDelete(t *testing.T) {
 	if body := response.Body.String(); body != expected {
 		t.Errorf("Expected %v got %s", expected, body)
 	}
+}
+
+func TestKeyValueHandlerDelete_NotExisting(t *testing.T) {
+	mockDb := &database.MemDatabase{}
+	mockDb.Init()
+	mockDb.Upsert("test", "1", []byte(`{"name":"jack"}`))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
+
+	req, _ := http.NewRequest("DELETE", "/ns/test/2", nil)
+	response := testingRouter.ExecuteRequest(req)
+
+	testingRouter.CheckResponseCode(t, http.StatusAccepted, response.Code)
 }
 
 func TestSearchHandler(t *testing.T) {
