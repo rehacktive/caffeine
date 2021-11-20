@@ -1,4 +1,4 @@
-package fs
+package database
 
 import (
 	"errors"

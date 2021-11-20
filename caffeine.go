@@ -8,7 +8,6 @@ import (
 	"github.com/namsral/flag"
 
 	"github.com/rehacktive/caffeine/database"
-	"github.com/rehacktive/caffeine/database/fs"
 	"github.com/rehacktive/caffeine/service"
 )
 
@@ -61,7 +60,7 @@ func main() {
 			Pass: pgPass,
 		}
 	case FS:
-		db = fs.NewDatabase(fsRoot)
+		db = database.NewDatabase(fsRoot)
 	}
 	go server.Init(db)
 
