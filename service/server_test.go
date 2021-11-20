@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"testing"
@@ -10,253 +11,229 @@ import (
 	"github.com/rehacktive/caffeine/database"
 )
 
-func TestHomeHandler(t *testing.T) {
-	mockDb := &database.MemDatabase{}
+type Test struct {
+	name                 string
+	method               string
+	path                 string
+	payload              string
+	expectedResponseCode int
+	expectedResponse     string
+	beforeTest           func(Database)
+	dbCheck              func(Database) error
+}
+
+var jsonPayload = `{"age":25,"name":"jack"}`
+var testNamespace = "ns1"
+var testKey = "key1"
+var validJsonForSchema = `{
+	"firstName":"john",
+	"lastName":"never",
+	"age":666
+}`
+var invalidJsonForSchema = `{
+	"firstName":"john"
+}`
+
+func setupCaffeineTest() (*TestingRouter, Database) {
+	mockDb := database.MemDatabase{}
 	mockDb.Init()
-	mockDb.Upsert("namespace", "key", []byte("{}"))
+	mockDb.Upsert(testNamespace, testKey, []byte(jsonPayload))
 
 	server := Server{
-		db: mockDb,
+		db: &mockDb,
 	}
 
 	testingRouter := TestingRouter{Router: mux.NewRouter()}
 	testingRouter.AddHandler("/", server.homeHandler)
-
-	req, _ := http.NewRequest("GET", "/", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusOK, response.Code)
-
-	if body := response.Body.String(); body != `["namespace"]` {
-		t.Errorf("Expected an empty array. Got %s", body)
-	}
-}
-
-func TestNamespaceHandlerGet(t *testing.T) {
-	json := `{"name":"jack"}`
-
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(json))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
 	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
-
-	req, _ := http.NewRequest("GET", "/ns/test", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusOK, response.Code)
-
-	expected := fmt.Sprintf(`[{"key":"1","value":%v}]`, json)
-	if body := response.Body.String(); body != expected {
-		t.Errorf("Expected %v got %s", expected, body)
-	}
-}
-
-func TestNamespaceHandlerGet_NotExisting(t *testing.T) {
-	json := `{"name":"jack"}`
-
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(json))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
-
-	req, _ := http.NewRequest("GET", "/ns/not_existing_ns", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusNotFound, response.Code)
-}
-
-func TestNamespaceHandlerDelete(t *testing.T) {
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(`{"name":"jack","age":25}`))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
-
-	req, _ := http.NewRequest("DELETE", "/ns/test", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusAccepted, response.Code)
-
-	expected := `{}`
-	if body := response.Body.String(); body != expected {
-		t.Errorf("Expected %v got %s", expected, body)
-	}
-}
-
-func TestNamespaceHandlerDelete_NotExisting(t *testing.T) {
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(`{"name":"jack","age":25}`))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(NamespacePattern, server.namespaceHandler)
-
-	req, _ := http.NewRequest("DELETE", "/ns/not_existing_ns", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusNotFound, response.Code)
-}
-
-func TestKeyValueHandlerPost(t *testing.T) {
-	json := `{"name":"jack"}`
-
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
 	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
+	testingRouter.AddHandler(SchemaPattern, server.schemaHandler)
 
-	req, _ := http.NewRequest("POST", "/ns/test/1", strings.NewReader(json))
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusCreated, response.Code)
-
-	if body := response.Body.String(); body != json {
-		t.Errorf("Expected %v got %s", json, body)
-	}
-
-	value, err := mockDb.Get("test", "1")
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
-	}
-	if string(value) != json {
-		t.Errorf("Expected %v got %s", json, string(value))
-	}
+	return &testingRouter, &mockDb
 }
 
-func TestKeyValueHandlerGet(t *testing.T) {
-	json := `{"name":"jack"}`
-
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(json))
-
-	server := Server{
-		db: mockDb,
+func TestHandlers(t *testing.T) {
+	tests := []Test{
+		{
+			name:                 "test home handler",
+			method:               http.MethodGet,
+			path:                 "/",
+			payload:              "",
+			expectedResponseCode: http.StatusOK,
+			expectedResponse:     `["ns1"]`,
+		},
+		{
+			name:                 "test namespace get",
+			method:               http.MethodGet,
+			path:                 "/ns/" + testNamespace,
+			payload:              "",
+			expectedResponseCode: http.StatusOK,
+			expectedResponse:     fmt.Sprintf(`[{"key":"%v","value":%v}]`, testKey, jsonPayload),
+		},
+		{
+			name:                 "test namespace get not existing",
+			method:               http.MethodGet,
+			path:                 "/ns/" + "not_existing_namespace",
+			payload:              "",
+			expectedResponseCode: http.StatusNotFound,
+			expectedResponse:     "",
+		},
+		{
+			name:                 "test namespace delete",
+			method:               http.MethodDelete,
+			path:                 "/ns/" + testNamespace,
+			payload:              "",
+			expectedResponseCode: http.StatusAccepted,
+			expectedResponse:     "{}",
+		},
+		{
+			name:                 "test namespace delete not existing",
+			method:               http.MethodDelete,
+			path:                 "/ns/" + "not_existing_namespace",
+			payload:              "",
+			expectedResponseCode: http.StatusNotFound,
+			expectedResponse:     "",
+		},
+		{
+			name:                 "test keyvalue post",
+			method:               http.MethodPost,
+			path:                 "/ns/test/1",
+			payload:              jsonPayload,
+			expectedResponseCode: http.StatusCreated,
+			expectedResponse:     "",
+			dbCheck: func(d Database) error {
+				value, err := d.Get("test", "1")
+				if err != nil {
+					return err
+				}
+				if string(value) != jsonPayload {
+					fmt.Errorf("Expected %v got %s", jsonPayload, string(value))
+				}
+				return nil
+			},
+		},
+		{
+			name:                 "test keyvalue get",
+			method:               http.MethodGet,
+			path:                 "/ns/" + testNamespace + "/" + testKey,
+			payload:              "",
+			expectedResponseCode: http.StatusOK,
+			expectedResponse:     jsonPayload,
+		},
+		{
+			name:                 "test keyvalue get not existing",
+			method:               http.MethodGet,
+			path:                 "/ns/" + testNamespace + "/not_existing",
+			payload:              "",
+			expectedResponseCode: http.StatusNotFound,
+			expectedResponse:     "",
+		},
+		{
+			name:                 "test keyvalue delete",
+			method:               http.MethodDelete,
+			path:                 "/ns/" + testNamespace + "/" + testKey,
+			payload:              "",
+			expectedResponseCode: http.StatusAccepted,
+			expectedResponse:     "{}",
+		},
+		{
+			name:                 "test keyvalue delete not existing",
+			method:               http.MethodDelete,
+			path:                 "/ns/" + testNamespace + "/not_existing",
+			payload:              "",
+			expectedResponseCode: http.StatusNotFound,
+			expectedResponse:     "",
+		},
+		{
+			name:                 "test schema post",
+			method:               http.MethodPost,
+			path:                 "/schema/user",
+			payload:              getUserSchema(),
+			expectedResponseCode: http.StatusCreated,
+			expectedResponse:     "",
+			dbCheck: func(d Database) error {
+				value, err := d.Get("user_schema", SchemaId)
+				if err != nil {
+					return err
+				}
+				if string(value) != jsonPayload {
+					fmt.Errorf("Expected %v got %s", jsonPayload, string(value))
+				}
+				return nil
+			},
+		},
+		{
+			name:                 "test schema get",
+			method:               http.MethodGet,
+			path:                 "/schema/user",
+			payload:              getUserSchema(),
+			expectedResponseCode: http.StatusOK,
+			expectedResponse:     getUserSchema(),
+			beforeTest: func(d Database) {
+				d.Upsert("user"+SchemaId, SchemaId, []byte(getUserSchema()))
+			},
+		},
+		{
+			name:                 "test schema get not existing",
+			method:               http.MethodGet,
+			path:                 "/schema/not_existing",
+			payload:              "",
+			expectedResponseCode: http.StatusNotFound,
+			expectedResponse:     "",
+		},
+		{
+			name:                 "test schema delete",
+			method:               http.MethodDelete,
+			path:                 "/schema/user",
+			payload:              "",
+			expectedResponseCode: http.StatusAccepted,
+			expectedResponse:     "{}",
+			beforeTest: func(d Database) {
+				d.Upsert("user"+SchemaId, SchemaId, []byte(getUserSchema()))
+			},
+		},
+		{
+			name:                 "test post valid json with schema",
+			method:               http.MethodPost,
+			path:                 "/ns/user/1",
+			payload:              validJsonForSchema,
+			expectedResponseCode: http.StatusCreated,
+			expectedResponse:     validJsonForSchema,
+			beforeTest: func(d Database) {
+				d.Upsert("user"+SchemaId, SchemaId, []byte(getUserSchema()))
+			},
+		},
+		{
+			name:                 "test post invalid json with schema",
+			method:               http.MethodPost,
+			path:                 "/ns/user/1",
+			payload:              invalidJsonForSchema,
+			expectedResponseCode: http.StatusBadRequest,
+			expectedResponse:     `{"error": "(root): lastName is required"}`,
+			beforeTest: func(d Database) {
+				d.Upsert("user"+SchemaId, SchemaId, []byte(getUserSchema()))
+			},
+		},
 	}
 
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
+	for _, test := range tests {
+		testingRouter, mockDb := setupCaffeineTest()
+		if test.beforeTest != nil {
+			test.beforeTest(mockDb)
+		}
+		log.Println("running test: ", test.name)
+		req, _ := http.NewRequest(test.method, test.path, strings.NewReader(test.payload))
+		response := testingRouter.ExecuteRequest(req)
+		testingRouter.CheckResponseCode(t, test.expectedResponseCode, response.Code)
+		if test.expectedResponse != "" {
+			testingRouter.CheckResponse(t, response.Body.String(), test.expectedResponse)
+		}
+		if test.dbCheck != nil {
+			err := test.dbCheck(mockDb)
+			if err != nil {
+				t.Errorf(err.Error())
+			}
+		}
 
-	req, _ := http.NewRequest("GET", "/ns/test/1", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusOK, response.Code)
-
-	if body := response.Body.String(); body != json {
-		t.Errorf("Expected %v got %s", json, body)
 	}
-}
-
-func TestKeyValueHandlerGet_NotExisting(t *testing.T) {
-	json := `{"name":"jack"}`
-
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(json))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
-
-	req, _ := http.NewRequest("GET", "/ns/test/2", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusNotFound, response.Code)
-}
-
-func TestKeyValueHandlerDelete(t *testing.T) {
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(`{"name":"jack"}`))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
-
-	req, _ := http.NewRequest("DELETE", "/ns/test/1", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusAccepted, response.Code)
-
-	expected := `{}`
-	if body := response.Body.String(); body != expected {
-		t.Errorf("Expected %v got %s", expected, body)
-	}
-}
-
-func TestKeyValueHandlerDelete_NotExisting(t *testing.T) {
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(`{"name":"jack"}`))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
-
-	req, _ := http.NewRequest("DELETE", "/ns/test/2", nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusAccepted, response.Code)
-}
-
-func TestSearchHandler(t *testing.T) {
-	json1 := `{"name":"jack"}`
-	json2 := `{"name":"john"}`
-
-	mockDb := &database.MemDatabase{}
-	mockDb.Init()
-	mockDb.Upsert("test", "1", []byte(json1))
-	mockDb.Upsert("test", "2", []byte(json2))
-
-	server := Server{
-		db: mockDb,
-	}
-
-	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(SearchPattern, server.searchHandler, "filter", "{filter}")
-
-	req, _ := http.NewRequest("GET", `/search/test?filter="select(.name==\"john\")"`, nil)
-	response := testingRouter.ExecuteRequest(req)
-
-	testingRouter.CheckResponseCode(t, http.StatusOK, response.Code)
-
-	// expected := fmt.Sprintf(`{"results":[{"key":"1","value":%v}]}`, json1)
-	// if body := response.Body.String(); body != expected {
-	// 	t.Errorf("Expected %v got %s", expected, body)
-	// }
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,4 +28,19 @@ func (tr *TestingRouter) CheckResponseCode(t *testing.T, expected, actual int) {
 	if expected != actual {
 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
 	}
+}
+
+func (tr *TestingRouter) CheckResponse(t *testing.T, response string, expected string) {
+	if response != expected {
+		t.Errorf("Expected %s  Got %s", expected, response)
+	}
+}
+
+// utils
+func getUserSchema() string {
+	jsonSchema, err := ioutil.ReadFile("../schema_sample/user_schema.json")
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonSchema)
 }
