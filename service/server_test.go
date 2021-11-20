@@ -91,7 +91,7 @@ func TestKeyValueHandlerPost(t *testing.T) {
 	}
 
 	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyvalueHandler)
+	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
 
 	req, _ := http.NewRequest("POST", "/ns/test/1", strings.NewReader(json))
 	response := testingRouter.ExecuteRequest(req)
@@ -123,7 +123,7 @@ func TestKeyValueHandlerGet(t *testing.T) {
 	}
 
 	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyvalueHandler)
+	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
 
 	req, _ := http.NewRequest("GET", "/ns/test/1", nil)
 	response := testingRouter.ExecuteRequest(req)
@@ -145,7 +145,7 @@ func TestKeyValueHandlerDelete(t *testing.T) {
 	}
 
 	testingRouter := TestingRouter{Router: mux.NewRouter()}
-	testingRouter.AddHandler(KeyValuePattern, server.keyvalueHandler)
+	testingRouter.AddHandler(KeyValuePattern, server.keyValueHandler)
 
 	req, _ := http.NewRequest("DELETE", "/ns/test/1", nil)
 	response := testingRouter.ExecuteRequest(req)

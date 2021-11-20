@@ -50,7 +50,7 @@ func (s *Server) Init(db Database) {
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/ns", s.homeHandler)
 	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)
-	s.router.HandleFunc(KeyValuePattern, s.keyvalueHandler)
+	s.router.HandleFunc(KeyValuePattern, s.keyValueHandler)
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
@@ -83,31 +83,32 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	namespace := vars["namespace"]
 
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
-	case "GET":
+	case http.MethodGet:
 		data, err := s.db.GetAll(namespace)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		namespaceData, err := jsonWrapper(data)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error())
+			respondWithError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(namespaceData))
 
-	case "DELETE":
+	case http.MethodDelete:
 		err := s.db.DeleteAll(namespace)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusNotFound, err.Error())
+			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
 }
 
-func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
@@ -117,7 +118,7 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 	key := vars["key"]
 
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		defer r.Body.Close()
 		r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 		data, err := ioutil.ReadAll(r.Body)
@@ -132,21 +133,22 @@ func (s *Server) keyvalueHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err = s.db.Upsert(namespace, key, data)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusCreated, string(data))
-	case "GET":
+	case http.MethodGet:
 		data, err := s.db.Get(namespace, key)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
-	case "DELETE":
+	case http.MethodDelete:
 		err := s.db.Delete(namespace, key)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
@@ -161,7 +163,7 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 	namespace := vars["namespace"] + SchemaId
 
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		defer r.Body.Close()
 		r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 		data, err := ioutil.ReadAll(r.Body)
@@ -177,17 +179,18 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Println("added schema for namespace " + vars["namespace"])
 		respondWithJSON(w, http.StatusCreated, string(data))
-	case "GET":
+	case http.MethodGet:
 		data, err := s.db.Get(namespace, SchemaId)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
-	case "DELETE":
+	case http.MethodDelete:
 		err := s.db.Delete(namespace, SchemaId)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusNotFound, err.Error())
+			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
@@ -206,12 +209,13 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		vars := mux.Vars(r)
 		query, err := gojq.Parse(vars["filter"])
 		if err != nil {
 			log.Println("error on parsing", err)
 			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
 		}
 		data, err := s.db.GetAll(vars["namespace"])
 		if err != nil {
@@ -224,6 +228,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 			err := json.Unmarshal(value, &jsonContent)
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, err.Error())
+				return
 			}
 			iter := query.Run(jsonContent)
 			for {
@@ -234,6 +239,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 				if err, ok := v.(error); ok {
 					log.Println("error on query", err)
 					respondWithError(w, http.StatusInternalServerError, err.Error())
+					return
 				}
 				result.Results = append(result.Results, map[string]interface{}{"key": key, "value": v})
 			}
