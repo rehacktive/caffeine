@@ -9,8 +9,11 @@ Features:
 - CORS enabled
 - easy to deploy as container
 
-\* you can use an in-memory data approach with zero config or postgres as
-database, you just need an instance running, no queries/sql/worries!
+
+Currently supports:
+  - in memory database
+  - postgres
+  - filesystem storage
 
 For a sample Vue app using caffeine see: https://gist.github.com/calogxro/6e601e07c2a937df4418d104fb717570
 
@@ -21,7 +24,17 @@ Simply start the server with:
 ```go 
 go run caffeine.go
 ```
-optionally provide -ip_port param, default is `:8000`
+optional params are:
+
+```sh
+Usage of caffeine:
+  -DB_TYPE="memory": db type to use, options: memory | postgres | fs
+  -FS_ROOT="./data": path of the file storage root
+  -IP_PORT=":8000": ip:port to expose
+  -PG_HOST="0.0.0.0": postgres host (port is 5432)
+  -PG_PASS="": postgres password
+  -PG_USER="": postgres user
+```
 
 Store a new "user" with an ID and some json data:
 
