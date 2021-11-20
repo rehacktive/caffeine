@@ -118,13 +118,8 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
-	namespace, okNs := vars["namespace"]
-	key, okKey := vars["key"]
-
-	if !okNs || !okKey {
-		respondWithError(w, http.StatusBadRequest, ErrInvalidArguments.Error())
-		return
-	}
+	namespace := vars["namespace"]
+	key := vars["key"]
 
 	switch r.Method {
 	case http.MethodPost:

@@ -3,11 +3,13 @@ package database
 import (
 	"errors"
 	"fmt"
-	"github.com/rehacktive/caffeine/service"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/rehacktive/caffeine/service"
 )
 
 type storage struct {
@@ -42,7 +44,7 @@ func (s *storage) Upsert(namespace string, key string, value []byte) error {
 
 func (s *storage) Get(namespace string, key string) ([]byte, error) {
 	filePath := s.getFilePath(namespace, key)
-	return ioutil.ReadFile(filePath)
+	return ioutil.ReadFile(filepath.Clean(filePath))
 }
 
 func (s *storage) GetAll(namespace string) (map[string][]byte, error) {
@@ -105,9 +107,9 @@ func (s *storage) ensureNamespace(namespace string) error {
 }
 
 func (s *storage) getFilePath(namespace, key string) string {
-	return fmt.Sprintf("%s/%s.json", s.getNamespacePath(namespace), key)
+	return filepath.Join(s.getNamespacePath(namespace), fmt.Sprintf("%s.json", key))
 }
 
 func (s *storage) getNamespacePath(namespace string) string {
-	return fmt.Sprintf("%s/%s", s.rootDirPath, namespace)
+	return filepath.Join(s.rootDirPath, namespace)
 }
