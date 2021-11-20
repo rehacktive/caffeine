@@ -11,7 +11,7 @@ import (
 	"github.com/rehacktive/caffeine/database"
 )
 
-type Test struct {
+type testCase struct {
 	name                 string
 	method               string
 	path                 string
@@ -53,7 +53,7 @@ func setupCaffeineTest() (*TestingRouter, Database) {
 }
 
 func TestHandlers(t *testing.T) {
-	tests := []Test{
+	tests := []testCase{
 		{
 			name:                 "test home handler",
 			method:               http.MethodGet,
