@@ -113,6 +113,14 @@ func TestHandlers(t *testing.T) {
 			},
 		},
 		{
+			name:                 "test keyvalue post invalid json",
+			method:               http.MethodPost,
+			path:                 "/ns/test/1",
+			payload:              "{some bad data...",
+			expectedResponseCode: http.StatusBadRequest,
+			expectedResponse:     "",
+		},
+		{
 			name:                 "test keyvalue get",
 			method:               http.MethodGet,
 			path:                 "/ns/" + testNamespace + "/" + testKey,
