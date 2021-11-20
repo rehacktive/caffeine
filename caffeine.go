@@ -60,7 +60,9 @@ func main() {
 			Pass: pgPass,
 		}
 	case FS:
-		db = database.NewDatabase(fsRoot)
+		db = &database.StorageDatabase{
+			RootDirPath: fsRoot,
+		}
 	}
 	go server.Init(db)
 

@@ -8,26 +8,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/rehacktive/caffeine/service"
 )
 
-type storage struct {
-	rootDirPath string
+type StorageDatabase struct {
+	RootDirPath string
 }
 
-func NewDatabase(rootDirectoryPath string) service.Database {
-	return &storage{rootDirPath: rootDirectoryPath}
-}
-
-func (s *storage) Init() {
-	err := os.MkdirAll(s.rootDirPath, os.ModePerm)
+func (s *StorageDatabase) Init() {
+	err := os.MkdirAll(s.RootDirPath, os.ModePerm)
 	if err != nil {
-		log.Fatal("error connecting to postgres: ", err)
+		log.Fatal("error on StorageDatabase Init: ", err)
 	}
 }
 
-func (s *storage) Upsert(namespace string, key string, value []byte) error {
+func (s *StorageDatabase) Upsert(namespace string, key string, value []byte) error {
 	err := s.ensureNamespace(namespace)
 	if err != nil {
 		return err
@@ -42,12 +36,12 @@ func (s *storage) Upsert(namespace string, key string, value []byte) error {
 	return err
 }
 
-func (s *storage) Get(namespace string, key string) ([]byte, error) {
+func (s *StorageDatabase) Get(namespace string, key string) ([]byte, error) {
 	filePath := s.getFilePath(namespace, key)
 	return ioutil.ReadFile(filepath.Clean(filePath))
 }
 
-func (s *storage) GetAll(namespace string) (map[string][]byte, error) {
+func (s *StorageDatabase) GetAll(namespace string) (map[string][]byte, error) {
 	result := make(map[string][]byte)
 
 	docs, err := ioutil.ReadDir(s.getNamespacePath(namespace))
@@ -69,7 +63,7 @@ func (s *storage) GetAll(namespace string) (map[string][]byte, error) {
 	return result, nil
 }
 
-func (s *storage) Delete(namespace string, key string) error {
+func (s *StorageDatabase) Delete(namespace string, key string) error {
 	filePath := s.getFilePath(namespace, key)
 
 	_, err := os.Stat(filePath)
@@ -80,14 +74,14 @@ func (s *storage) Delete(namespace string, key string) error {
 	return os.Remove(filePath)
 }
 
-func (s *storage) DeleteAll(namespace string) error {
+func (s *StorageDatabase) DeleteAll(namespace string) error {
 	return os.RemoveAll(s.getNamespacePath(namespace))
 }
 
-func (s *storage) GetNamespaces() []string {
+func (s *StorageDatabase) GetNamespaces() []string {
 	results := make([]string, 0)
 
-	namespaces, err := os.ReadDir(s.rootDirPath)
+	namespaces, err := os.ReadDir(s.RootDirPath)
 	if err != nil {
 		fmt.Println(err)
 		return results
@@ -101,15 +95,15 @@ func (s *storage) GetNamespaces() []string {
 	return results
 }
 
-func (s *storage) ensureNamespace(namespace string) error {
+func (s *StorageDatabase) ensureNamespace(namespace string) error {
 	path := s.getNamespacePath(namespace)
 	return os.MkdirAll(path, os.ModePerm)
 }
 
-func (s *storage) getFilePath(namespace, key string) string {
+func (s *StorageDatabase) getFilePath(namespace, key string) string {
 	return filepath.Join(s.getNamespacePath(namespace), fmt.Sprintf("%s.json", key))
 }
 
-func (s *storage) getNamespacePath(namespace string) string {
-	return filepath.Join(s.rootDirPath, namespace)
+func (s *StorageDatabase) getNamespacePath(namespace string) string {
+	return filepath.Join(s.RootDirPath, namespace)
 }
