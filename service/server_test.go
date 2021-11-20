@@ -10,6 +10,46 @@ import (
 	"github.com/rehacktive/caffeine/database"
 )
 
+type Test struct {
+	method               string
+	path                 string
+	payload              *strings.Reader
+	expectedResponseCode int
+	expectedResponse     string
+}
+
+func setupCaffeineTest() TestingRouter {
+	mockDb := &database.MemDatabase{}
+	mockDb.Upsert("ns1", "key", []byte(`{"name":"jack","age":25}`))
+
+	server := Server{
+		db: mockDb,
+	}
+
+	testingRouter := TestingRouter{Router: mux.NewRouter()}
+	testingRouter.AddHandler("/", server.homeHandler)
+	return testingRouter
+}
+
+func TestHandlers(t *testing.T) {
+	tests := []Test{
+		{
+			method:               http.MethodGet,
+			path:                 "/",
+			payload:              nil,
+			expectedResponseCode: http.StatusOK,
+			expectedResponse:     `["ns1"]`,
+		},
+	}
+
+	for _, test := range tests {
+		testingRouter := setupCaffeineTest()
+		req, _ := http.NewRequest(test.method, test.path, test.payload)
+		response := testingRouter.ExecuteRequest(req)
+		testingRouter.CheckResponseCode(t, test.expectedResponseCode, response.Code)
+	}
+}
+
 func TestHomeHandler(t *testing.T) {
 	mockDb := &database.MemDatabase{}
 	mockDb.Init()
