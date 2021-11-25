@@ -19,7 +19,8 @@ func respondWithJSON(w http.ResponseWriter, code int, jsonContent string) {
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
-	respondWithJSON(w, code, fmt.Sprintf("{\"error\": \"%v\"}", message))
+	respondWithJSON(w, code, fmt.Sprintf(
+		`{ "status": %v, "message": "%v" }`, code, message))
 }
 
 func jsonWrapper(payload interface{}) (content []byte, err error) {

@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/rehacktive/caffeine/database"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,11 +18,11 @@ import (
 
 type Database interface {
 	Init()
-	Upsert(namespace string, key string, value []byte) error
-	Get(namespace string, key string) ([]byte, error)
-	GetAll(namespace string) (map[string][]byte, error)
-	Delete(namespace string, key string) error
-	DeleteAll(namespace string) error
+	Upsert(namespace string, key string, value []byte) *database.DbError
+	Get(namespace string, key string) ([]byte, *database.DbError)
+	GetAll(namespace string) (map[string][]byte, *database.DbError)
+	Delete(namespace string, key string) *database.DbError
+	DeleteAll(namespace string) *database.DbError
 	GetNamespaces() []string
 }
 
@@ -29,6 +31,7 @@ const (
 	KeyValuePattern  = "/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}"
 	SearchPattern    = "/search/{namespace:[a-zA-Z0-9]+}"
 	SchemaPattern    = "/schema/{namespace:[a-zA-Z0-9]+}"
+	OpenAPIPattern   = "/{openapi|swagger}.json"
 	SchemaId         = "_schema"
 )
 
@@ -57,6 +60,7 @@ func (s *Server) Init(db Database) {
 	s.router.HandleFunc(KeyValuePattern, s.keyValueHandler)
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
+	s.router.HandleFunc(OpenAPIPattern, s.openAPIHandler)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
@@ -90,9 +94,9 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
 	case http.MethodGet:
-		data, err := s.db.GetAll(namespace)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+		data, dbErr := s.db.GetAll(namespace)
+		if dbErr != nil {
+			respondWithError(w, http.StatusBadRequest, dbErr.Error())
 			return
 		}
 		namespaceData, err := jsonWrapper(data)
@@ -144,14 +148,30 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		data, err := s.db.Get(namespace, key)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+
+			switch err.ErrorCode {
+			case database.ID_NOT_FOUND:
+				respondWithError(w, http.StatusNotFound, err.Error())
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, err.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
 	case http.MethodDelete:
 		err := s.db.Delete(namespace, key)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error())
+
+			switch err.ErrorCode {
+			case database.ID_NOT_FOUND:
+				respondWithError(w, http.StatusNotFound, err.Error())
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, err.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
@@ -253,6 +273,150 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	var namespaces []string = s.db.GetNamespaces()
+
+	pathsMap := map[string]interface{}{}
+
+	rootMap := map[string]interface{}{
+		"openapi": "3.0.1",
+		"info": map[string]interface{}{
+			"title":       "Caffeine Application Server",
+			"description": "Sample Caffeine application",
+			"version":     "0.1.0",
+		},
+		"externalDocs": map[string]interface{}{
+			"description": "Github Project Page",
+			"url":         "https://github.com/rehacktive/caffeine",
+		},
+		"servers": []interface{}{
+			map[string]interface{}{
+				"url": "http://localhost:8000",
+			},
+		},
+		"paths": pathsMap,
+	}
+
+	for _, entity := range namespaces {
+		path := fmt.Sprintf("/ns/%s/{id}", entity)
+
+		getOperationMap := map[string]interface{}{
+			"parameters": []interface{}{
+				map[string]interface{}{
+					"name":     "id",
+					"in":       "path",
+					"required": true,
+					"schema": map[string]interface{}{
+						"type": "string",
+					},
+				},
+			},
+			"responses": map[string]interface{}{
+				"default": map[string]interface{}{
+					"description": "default response",
+					"content":     map[string]interface{}{},
+				},
+				"200": map[string]interface{}{
+					"description": "200 OK",
+					"content": map[string]interface{}{
+						"application/json": map[string]interface{}{},
+					},
+				},
+				"404": map[string]interface{}{
+					"description": "404 Not Found",
+					"content":     map[string]interface{}{} ,
+				},
+			},
+		}
+
+		postOperationMap := map[string]interface{}{
+			"parameters": []interface{}{
+				map[string]interface{}{
+					"name":     "id",
+					"in":       "path",
+					"required": true,
+					"schema": map[string]interface{}{
+						"type": "string",
+					},
+				},
+			},
+			"requestBody": map[string]interface{}{
+				"content": map[string]interface{}{
+					"application/json": map[string]interface{}{
+						"schema": map[string]interface{}{},
+					},
+				},
+			},
+			"responses": map[string]interface{}{
+				"default": map[string]interface{}{
+					"description": "default response",
+					"content":     map[string]interface{}{},
+				},
+				"201": map[string]interface{}{
+					"description": "201 Created",
+					"content": map[string]interface{}{
+						"application/json": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		deleteOperationMap := map[string]interface{}{
+			"parameters": []interface{}{
+				map[string]interface{}{
+					"name":     "id",
+					"in":       "path",
+					"required": true,
+					"schema": map[string]interface{}{
+						"type": "string",
+					},
+				},
+			},
+			"responses": map[string]interface{}{
+				"default": map[string]interface{}{
+					"description": "default response",
+					"content":     map[string]interface{}{},
+				},
+				"202": map[string]interface{}{
+					"description": "200 Accepted",
+					"content": map[string]interface{}{
+						"application/json": map[string]interface{}{},
+					},
+				},
+				"404": map[string]interface{}{
+					"description": "404 Not Found",
+					"content":     map[string]interface{}{} ,
+				},
+			},
+		}
+
+		pathsMap[path] = map[string]interface{}{
+			"get":    getOperationMap,
+			"post":   postOperationMap,
+			"delete": deleteOperationMap,
+		}
+	}
+
+	switch r.Method {
+	case "GET":
+		output, err := json.MarshalIndent(rootMap, "", "  ")
+		output = append(output, '\n')
+
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+		}
+		respondWithJSON(w, http.StatusOK, string(output))
+	case "POST":
+		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
+	case "DELETE":
+		respondWithError(w, http.StatusNotImplemented, "cannot DELETE this endpoint!")
+	}
+}
+
 // utils
 
 func (s *Server) validate(namespace string, data []byte) error {
@@ -281,7 +445,7 @@ func (s *Server) validate(namespace string, data []byte) error {
 	} else {
 		// otherwise just validate as json
 		var parsed interface{}
-		err = json.Unmarshal(data, &parsed)
+		err := json.Unmarshal(data, &parsed)
 		if err != nil {
 			log.Printf("The document is not valid JSON")
 			return err

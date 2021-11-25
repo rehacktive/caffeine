@@ -41,42 +41,59 @@ func (p *PGDatabase) Init() {
 	p.db = db
 }
 
-func (p PGDatabase) Upsert(namespace string, key string, value []byte) (err error) {
-	err = p.ensureNamespace(namespace)
+func (p PGDatabase) Upsert(namespace string, key string, value []byte) (*DbError) {
+	err := p.ensureNamespace(namespace)
+
 	if err != nil {
-		return
+		return &DbError{
+			ErrorCode: NAMESPACE_NOT_FOUND,
+			Message:   fmt.Sprintf("namespace %v does not exist", namespace, key),
+		}
 	}
-	_, err = p.db.Exec(fmt.Sprintf(insertQuery, namespace), key, string(value))
-	if err != nil {
-		log.Println("error on Upsert: ", err)
+	_, dbErr := p.db.Exec(fmt.Sprintf(insertQuery, namespace), key, string(value))
+	if dbErr != nil {
+		return &DbError{
+			ErrorCode: INTERNAL_ERROR,
+			Message: fmt.Sprintf("error on Upsert: %v", dbErr),
+		}
 	}
-	return
+	return nil
 }
 
-func (p PGDatabase) Get(namespace string, key string) ([]byte, error) {
-	rows, err := p.db.Query(fmt.Sprintf(getQuery, namespace), key)
-	if err != nil {
-		log.Println("error on Get: ", err)
-		return nil, err
+func (p PGDatabase) Get(namespace string, key string) ([]byte, *DbError) {
+	rows, dbErr := p.db.Query(fmt.Sprintf(getQuery, namespace), key)
+	if dbErr != nil {
+		return nil, &DbError{
+			ErrorCode: INTERNAL_ERROR,
+			Message: fmt.Sprintf("error on Get: %v", dbErr),
+		}
 	}
 	defer rows.Close()
 	if rows.Next() {
 		var data string
-		err = rows.Scan(&data)
-		if err != nil {
-			log.Println("Scan: ", err)
+		scanErr := rows.Scan(&data)
+		if scanErr != nil {
+			return nil, &DbError{
+				ErrorCode: INTERNAL_ERROR,
+				Message: fmt.Sprintf("scan %v", scanErr),
+			}
 		}
 		return []byte(data), nil
 	}
-	return nil, fmt.Errorf("value not found in namespace %v for key %v", namespace, key)
+	return nil, &DbError{
+		ErrorCode: ID_NOT_FOUND,
+		Message: fmt.Sprintf("value not found in namespace %v for key %v", namespace, key),
+	}
 }
 
-func (p PGDatabase) GetAll(namespace string) (map[string][]byte, error) {
+func (p PGDatabase) GetAll(namespace string) (map[string][]byte, *DbError) {
 	sqlStatement := fmt.Sprintf(getAllQuery, namespace)
-	rows, err := p.db.Query(sqlStatement)
-	if err != nil {
-		log.Println("error on GetAll: ", err)
-		return nil, err
+	rows, dbErr := p.db.Query(sqlStatement)
+	if dbErr != nil {
+		return nil, &DbError{
+			ErrorCode: INTERNAL_ERROR,
+			Message: fmt.Sprintf("error on Get: %v", dbErr),
+		}
 	}
 	defer rows.Close()
 
@@ -84,29 +101,39 @@ func (p PGDatabase) GetAll(namespace string) (map[string][]byte, error) {
 
 	for rows.Next() {
 		var id, data string
-		err = rows.Scan(&id, &data)
-		if err != nil {
-			log.Println("Scan: ", err)
+		scanErr := rows.Scan(&id, &data)
+		if scanErr != nil {
+			return nil, &DbError{
+				ErrorCode: INTERNAL_ERROR,
+				Message: fmt.Sprintf("scan %v", scanErr),
+			}
 		}
 		ret[id] = []byte(data)
 	}
 	return ret, nil
 }
 
-func (p PGDatabase) Delete(namespace string, key string) error {
+func (p PGDatabase) Delete(namespace string, key string) *DbError {
 	_, err := p.db.Exec(fmt.Sprintf(deleteQuery, namespace), key)
 	if err != nil {
-		log.Println("error on Delete: ", err)
-		return err
+		message := fmt.Sprintf("error on Delete: %v", err)
+		return &DbError{
+			ErrorCode: INTERNAL_ERROR,
+			Message:   message,
+		}
 	}
 	return nil
 }
 
-func (p PGDatabase) DeleteAll(namespace string) error {
+func (p PGDatabase) DeleteAll(namespace string) *DbError {
 	sqlStatement := fmt.Sprintf(dropNamespaceQuery, namespace)
 	_, err := p.db.Exec(sqlStatement)
 	if err != nil {
-		log.Println("error on DeleteAll: ", err)
+		message := fmt.Sprintf("error on DeleteAll: %v", err)
+		return &DbError{
+			ErrorCode: INTERNAL_ERROR,
+			Message:   message,
+		}
 	}
 	return nil
 }
