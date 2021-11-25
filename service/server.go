@@ -139,8 +139,8 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		err = s.db.Upsert(namespace, key, data)
-		if err != nil {
+		upsertErr := s.db.Upsert(namespace, key, data)
+		if upsertErr != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
