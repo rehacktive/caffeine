@@ -96,21 +96,29 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		data, dbErr := s.db.GetAll(namespace)
 		if dbErr != nil {
-			respondWithError(w, http.StatusBadRequest, dbErr.Error())
-			return
+			switch dbErr.ErrorCode {
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 		}
 		namespaceData, err := jsonWrapper(data)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(namespaceData))
 
 	case http.MethodDelete:
-		err := s.db.DeleteAll(namespace)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
-			return
+		dbErr := s.db.DeleteAll(namespace)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
@@ -131,7 +139,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		err = s.validate(namespace, data)
@@ -139,23 +147,27 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		upsertErr := s.db.Upsert(namespace, key, data)
-		if upsertErr != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error())
+		dbErr:= s.db.Upsert(namespace, key, data)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 			return
 		}
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
-		data, err := s.db.Get(namespace, key)
-		if err != nil {
-
-			switch err.ErrorCode {
+		data, dbErr := s.db.Get(namespace, key)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
 			case database.ID_NOT_FOUND:
-				respondWithError(w, http.StatusNotFound, err.Error())
+				respondWithError(w, http.StatusNotFound, dbErr.Error())
 			case database.NAMESPACE_NOT_FOUND:
-				respondWithError(w, http.StatusBadRequest, err.Error())
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
 			default:
-				respondWithError(w, http.StatusInternalServerError, err.Error())
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
 			}
 			return
 		}
