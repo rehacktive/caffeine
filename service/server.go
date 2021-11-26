@@ -196,24 +196,24 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = s.db.Upsert(namespace, SchemaId, data)
-		if err != nil {
+		dbErr := s.db.Upsert(namespace, SchemaId, data)
+		if dbErr != nil {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		log.Println("added schema for namespace " + vars["namespace"])
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
-		data, err := s.db.Get(namespace, SchemaId)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+		data, dbErr := s.db.Get(namespace, SchemaId)
+		if dbErr != nil {
+			respondWithError(w, http.StatusNotFound, dbErr.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
 	case http.MethodDelete:
-		err := s.db.Delete(namespace, SchemaId)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+		dbErr := s.db.Delete(namespace, SchemaId)
+		if dbErr != nil {
+			respondWithError(w, http.StatusNotFound, dbErr.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
@@ -241,10 +241,10 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		data, err := s.db.GetAll(vars["namespace"])
-		if err != nil {
+		data, dbErr := s.db.GetAll(vars["namespace"])
+		if dbErr != nil {
 			log.Println("error on GetAll", err)
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusBadRequest, dbErr.Error())
 			return
 		}
 		for key, value := range data {
@@ -421,8 +421,8 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) validate(namespace string, data []byte) error {
 	// if namespace has a schema, validate against it
-	schemaJson, err := s.db.Get(namespace+SchemaId, SchemaId)
-	if err == nil {
+	schemaJson, dbErr := s.db.Get(namespace+SchemaId, SchemaId)
+	if dbErr == nil {
 		schemaLoader := gojsonschema.NewBytesLoader(schemaJson)
 		documentLoader := gojsonschema.NewBytesLoader(data)
 

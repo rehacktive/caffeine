@@ -217,7 +217,7 @@ func TestHandlers(t *testing.T) {
 			path:                 "/ns/user/1",
 			payload:              invalidJsonForSchema,
 			expectedResponseCode: http.StatusBadRequest,
-			expectedResponse:     `{"error": "(root): lastName is required"}`,
+			expectedResponse:     `{ "status": 400, "message": "(root): lastName is required" }`,
 			beforeTest: func(d Database) {
 				d.Upsert("user"+SchemaId, SchemaId, []byte(getUserSchema()))
 			},
