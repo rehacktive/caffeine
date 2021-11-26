@@ -47,7 +47,7 @@ func (p PGDatabase) Upsert(namespace string, key string, value []byte) (*DbError
 	if err != nil {
 		return &DbError{
 			ErrorCode: NAMESPACE_NOT_FOUND,
-			Message:   fmt.Sprintf("namespace %v does not exist", namespace, key),
+			Message:   fmt.Sprintf("namespace %v does not exist", namespace),
 		}
 	}
 	_, dbErr := p.db.Exec(fmt.Sprintf(insertQuery, namespace), key, string(value))

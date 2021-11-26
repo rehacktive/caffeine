@@ -37,7 +37,7 @@ func (s *StorageDatabase) Upsert(namespace string, key string, value []byte) *Db
 		if err != nil {
 			return &DbError {
 				ErrorCode: FILESYSTEM_ERROR,
-				Message: fmt.Sprintf("%v", err),
+				Message: err.Error(),
 			}
 		}
 	}
