@@ -313,10 +313,16 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 		"paths": pathsMap,
 	}
 
-	for _, entity := range namespaces {
-		path := fmt.Sprintf("/ns/%s/{id}", entity)
+	for _, namespace := range namespaces {
+		path := fmt.Sprintf("/ns/%s/{id}", namespace)
+		namespacePath := fmt.Sprintf("/ns/%s", namespace)
+		searchPath := fmt.Sprintf("/search/%s", namespace)
 
 		getOperationMap := map[string]interface{}{
+			"description": fmt.Sprintf("Get %v by id.", namespace),
+			"tags": []interface{}{
+				namespace,
+			},
 			"parameters": []interface{}{
 				map[string]interface{}{
 					"name":     "id",
@@ -340,12 +346,16 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 				},
 				"404": map[string]interface{}{
 					"description": "404 Not Found",
-					"content":     map[string]interface{}{} ,
+					"content":     map[string]interface{}{},
 				},
 			},
 		}
 
 		postOperationMap := map[string]interface{}{
+			"description": fmt.Sprintf("Insert or update %v with the given id.", namespace),
+			"tags": []interface{}{
+				namespace,
+			},
 			"parameters": []interface{}{
 				map[string]interface{}{
 					"name":     "id",
@@ -378,6 +388,10 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		deleteOperationMap := map[string]interface{}{
+			"description": fmt.Sprintf("Delete %v with the given id.", namespace),
+			"tags": []interface{}{
+				namespace,
+			},
 			"parameters": []interface{}{
 				map[string]interface{}{
 					"name":     "id",
@@ -401,7 +415,7 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 				},
 				"404": map[string]interface{}{
 					"description": "404 Not Found",
-					"content":     map[string]interface{}{} ,
+					"content":     map[string]interface{}{},
 				},
 			},
 		}
@@ -411,6 +425,108 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 			"post":   postOperationMap,
 			"delete": deleteOperationMap,
 		}
+
+		getNamespaceOperationMap := map[string]interface{}{
+			"description": fmt.Sprintf("Get all values for the namespace '%v'.", namespace),
+			"tags": []interface{}{
+				namespace,
+			},
+			"parameters": []interface{}{},
+			"responses": map[string]interface{}{
+				"default": map[string]interface{}{
+					"description": "default response",
+					"content":     map[string]interface{}{},
+				},
+				"200": map[string]interface{}{
+					"description": "200 OK",
+					"content": map[string]interface{}{
+						"application/json": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		deleteNamespaceOperationMap := map[string]interface{}{
+			"description": fmt.Sprintf("Delete the namespace '%v'.", namespace),
+			"tags": []interface{}{
+				namespace,
+			},
+			"parameters": []interface{}{},
+			"responses": map[string]interface{}{
+				"default": map[string]interface{}{
+					"description": "default response",
+					"content":     map[string]interface{}{},
+				},
+				"200": map[string]interface{}{
+					"description": "200 OK",
+					"content": map[string]interface{}{
+						"application/json": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		pathsMap[namespacePath] = map[string]interface{}{
+			"get":    getNamespaceOperationMap,
+			"delete": deleteNamespaceOperationMap,
+		}
+
+		searchOperationMap := map[string]interface{}{
+			"description": fmt.Sprintf("Search namespace '%v' by property (jq syntax).", namespace),
+			"tags": []interface{}{
+				namespace,
+			},
+			"parameters": []interface{}{
+				map[string]interface{}{
+					"in":   "query",
+					"name": "filter",
+					"schema": map[string]interface{}{
+						"type":    "string",
+						"example": `select(.name=="jack")`,
+					},
+				},
+			},
+			"responses": map[string]interface{}{
+				"default": map[string]interface{}{
+					"description": "default response",
+					"content":     map[string]interface{}{},
+				},
+				"200": map[string]interface{}{
+					"description": "200 OK",
+					"content": map[string]interface{}{
+						"application/json": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		pathsMap[searchPath] = map[string]interface{}{
+			"get": searchOperationMap,
+		}
+	}
+
+	getAllNamespacesOperationMap := map[string]interface{}{
+		"description": fmt.Sprintf("List all namespaces"),
+		"tags": []interface{}{
+			"namespaces",
+		},
+		"parameters": []interface{}{},
+		"responses": map[string]interface{}{
+			"default": map[string]interface{}{
+				"description": "default response",
+				"content":     map[string]interface{}{},
+			},
+			"200": map[string]interface{}{
+				"description": "200 OK",
+				"content": map[string]interface{}{
+					"application/json": map[string]interface{}{},
+				},
+			},
+		},
+	}
+
+	pathsMap["/ns"] = map[string]interface{}{
+		"get": getAllNamespacesOperationMap,
 	}
 
 	switch r.Method {
