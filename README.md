@@ -5,6 +5,7 @@ Features:
 - no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
 - schema validation
+- autogenerates Swagger/OpenAPI specs
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
 - CORS enabled
 - easy to deploy as container
@@ -119,6 +120,15 @@ Search by property (jq syntax)
   ]
 }
 ```
+
+## Swagger/OpenAPI specs
+
+After you add some data, you can generate the specs with:
+
+```sh
+curl -X GET http://localhost:8000/openapi.json
+```
+You can then paste the JSON here: https://editor.swagger.io and even use it interactively!
 
 ## Schema Validation
 
