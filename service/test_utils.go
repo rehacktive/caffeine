@@ -24,15 +24,21 @@ func (tr *TestingRouter) ExecuteRequest(req *http.Request) *httptest.ResponseRec
 	return rr
 }
 
-func (tr *TestingRouter) CheckResponseCode(t *testing.T, expected, actual int) {
+func checkResponseCode(t *testing.T, testName string, expected, actual int) {
 	if expected != actual {
-		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+		t.Errorf("%v: Expected response code %d. Got %d\n", testName, expected, actual)
 	}
 }
 
-func (tr *TestingRouter) CheckResponse(t *testing.T, response string, expected string) {
+func checkResponse(t *testing.T, testName string, response string, expected string) {
 	if response != expected {
-		t.Errorf("Expected %s  Got %s", expected, response)
+		t.Errorf("%v: Expected %s  Got %s", testName, expected, response)
+	}
+}
+
+func checkErr(t *testing.T, err error) {
+	if err != nil {
+		t.Fatalf("error: %v", err)
 	}
 }
 
