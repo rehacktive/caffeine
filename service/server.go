@@ -3,11 +3,12 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"github.com/rehacktive/caffeine/database"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/rehacktive/caffeine/database"
 
 	"github.com/gorilla/mux"
 	"github.com/itchyny/gojq"
@@ -146,7 +147,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		dbErr:= s.db.Upsert(namespace, key, data)
+		dbErr := s.db.Upsert(namespace, key, data)
 		if dbErr != nil {
 			switch dbErr.ErrorCode {
 			case database.NAMESPACE_NOT_FOUND:
@@ -294,7 +295,7 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 	rootMap := generateOpenAPIMap(namespaces)
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		output, err := json.MarshalIndent(rootMap, "", "  ")
 		output = append(output, '\n')
 
@@ -302,9 +303,9 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 		}
 		respondWithJSON(w, http.StatusOK, string(output))
-	case "POST":
+	case http.MethodPost:
 		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
-	case "DELETE":
+	case http.MethodDelete:
 		respondWithError(w, http.StatusNotImplemented, "cannot DELETE this endpoint!")
 	}
 }

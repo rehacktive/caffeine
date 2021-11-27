@@ -24,9 +24,9 @@ func (s *StorageDatabase) Init() {
 func (s *StorageDatabase) Upsert(namespace string, key string, value []byte) *DbError {
 	err := s.ensureNamespace(namespace)
 	if err != nil {
-		return &DbError {
+		return &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
-			Message: fmt.Sprintf("%v", err),
+			Message:   err.Error(),
 		}
 	}
 	filePath := s.getFilePath(namespace, key)
@@ -35,9 +35,9 @@ func (s *StorageDatabase) Upsert(namespace string, key string, value []byte) *Db
 	if statErr == nil || errors.Is(statErr, os.ErrNotExist) {
 		err = os.WriteFile(filePath, value, os.ModePerm)
 		if err != nil {
-			return &DbError {
+			return &DbError{
 				ErrorCode: FILESYSTEM_ERROR,
-				Message: err.Error(),
+				Message:   err.Error(),
 			}
 		}
 	}
@@ -48,9 +48,9 @@ func (s *StorageDatabase) Get(namespace string, key string) ([]byte, *DbError) {
 	filePath := s.getFilePath(namespace, key)
 	bytes, err := ioutil.ReadFile(filepath.Clean(filePath))
 	if err != nil {
-		return nil, &DbError {
+		return nil, &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
-			Message: fmt.Sprintf("%v", err),
+			Message:   err.Error(),
 		}
 	} else {
 		return bytes, nil
@@ -62,9 +62,9 @@ func (s *StorageDatabase) GetAll(namespace string) (map[string][]byte, *DbError)
 
 	docs, readDirErr := ioutil.ReadDir(s.getNamespacePath(namespace))
 	if readDirErr != nil {
-		return nil, &DbError {
+		return nil, &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
-			Message: fmt.Sprintf("%v", readDirErr),
+			Message:   readDirErr.Error(),
 		}
 	}
 	for _, doc := range docs {
@@ -88,7 +88,7 @@ func (s *StorageDatabase) Delete(namespace string, key string) *DbError {
 
 	_, err := os.Stat(filePath)
 	if err != nil {
-		return &DbError {
+		return &DbError{
 			ErrorCode: ID_NOT_FOUND,
 			Message:   fmt.Sprintf("value not found in namespace '%v' for key '%v'", namespace, key),
 		}
@@ -97,9 +97,9 @@ func (s *StorageDatabase) Delete(namespace string, key string) *DbError {
 	err = os.Remove(filePath)
 
 	if err != nil {
-		return &DbError {
+		return &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
-			Message: fmt.Sprintf("%v", err),
+			Message:   err.Error(),
 		}
 	} else {
 		return nil
@@ -110,9 +110,9 @@ func (s *StorageDatabase) DeleteAll(namespace string) *DbError {
 	err := os.RemoveAll(s.getNamespacePath(namespace))
 
 	if err != nil {
-		return &DbError {
+		return &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
-			Message: fmt.Sprintf("%v", err),
+			Message:   err.Error(),
 		}
 	} else {
 		return nil
