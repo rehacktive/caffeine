@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"github.com/rehacktive/caffeine/database"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,11 +17,11 @@ import (
 
 type Database interface {
 	Init()
-	Upsert(namespace string, key string, value []byte) error
-	Get(namespace string, key string) ([]byte, error)
-	GetAll(namespace string) (map[string][]byte, error)
-	Delete(namespace string, key string) error
-	DeleteAll(namespace string) error
+	Upsert(namespace string, key string, value []byte) *database.DbError
+	Get(namespace string, key string) ([]byte, *database.DbError)
+	GetAll(namespace string) (map[string][]byte, *database.DbError)
+	Delete(namespace string, key string) *database.DbError
+	DeleteAll(namespace string) *database.DbError
 	GetNamespaces() []string
 }
 
@@ -29,6 +30,7 @@ const (
 	KeyValuePattern  = "/ns/{namespace:[a-zA-Z0-9]+}/{key:[a-zA-Z0-9]+}"
 	SearchPattern    = "/search/{namespace:[a-zA-Z0-9]+}"
 	SchemaPattern    = "/schema/{namespace:[a-zA-Z0-9]+}"
+	OpenAPIPattern   = "/{openapi|swagger}.json"
 	SchemaId         = "_schema"
 )
 
@@ -57,6 +59,7 @@ func (s *Server) Init(db Database) {
 	s.router.HandleFunc(KeyValuePattern, s.keyValueHandler)
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
+	s.router.HandleFunc(OpenAPIPattern, s.openAPIHandler)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
@@ -90,23 +93,31 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
 	case http.MethodGet:
-		data, err := s.db.GetAll(namespace)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
-			return
+		data, dbErr := s.db.GetAll(namespace)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 		}
 		namespaceData, err := jsonWrapper(data)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(namespaceData))
 
 	case http.MethodDelete:
-		err := s.db.DeleteAll(namespace)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
-			return
+		dbErr := s.db.DeleteAll(namespace)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
@@ -127,7 +138,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 1048576)
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		err = s.validate(namespace, data)
@@ -135,23 +146,43 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		err = s.db.Upsert(namespace, key, data)
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error())
+		dbErr:= s.db.Upsert(namespace, key, data)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 			return
 		}
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
-		data, err := s.db.Get(namespace, key)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+		data, dbErr := s.db.Get(namespace, key)
+		if dbErr != nil {
+			switch dbErr.ErrorCode {
+			case database.ID_NOT_FOUND:
+				respondWithError(w, http.StatusNotFound, dbErr.Error())
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, dbErr.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
+			}
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
 	case http.MethodDelete:
 		err := s.db.Delete(namespace, key)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, err.Error())
+
+			switch err.ErrorCode {
+			case database.ID_NOT_FOUND:
+				respondWithError(w, http.StatusNotFound, err.Error())
+			case database.NAMESPACE_NOT_FOUND:
+				respondWithError(w, http.StatusBadRequest, err.Error())
+			default:
+				respondWithError(w, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
@@ -176,24 +207,24 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = s.db.Upsert(namespace, SchemaId, data)
-		if err != nil {
+		dbErr := s.db.Upsert(namespace, SchemaId, data)
+		if dbErr != nil {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		log.Println("added schema for namespace " + vars["namespace"])
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
-		data, err := s.db.Get(namespace, SchemaId)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+		data, dbErr := s.db.Get(namespace, SchemaId)
+		if dbErr != nil {
+			respondWithError(w, http.StatusNotFound, dbErr.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusOK, string(data))
 	case http.MethodDelete:
-		err := s.db.Delete(namespace, SchemaId)
-		if err != nil {
-			respondWithError(w, http.StatusNotFound, err.Error())
+		dbErr := s.db.Delete(namespace, SchemaId)
+		if dbErr != nil {
+			respondWithError(w, http.StatusNotFound, dbErr.Error())
 			return
 		}
 		respondWithJSON(w, http.StatusAccepted, "{}")
@@ -221,10 +252,10 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		data, err := s.db.GetAll(vars["namespace"])
-		if err != nil {
+		data, dbErr := s.db.GetAll(vars["namespace"])
+		if dbErr != nil {
 			log.Println("error on GetAll", err)
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithError(w, http.StatusBadRequest, dbErr.Error())
 			return
 		}
 		for key, value := range data {
@@ -253,12 +284,37 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	var namespaces []string = s.db.GetNamespaces()
+
+	rootMap := generateOpenAPIMap(namespaces)
+
+	switch r.Method {
+	case "GET":
+		output, err := json.MarshalIndent(rootMap, "", "  ")
+		output = append(output, '\n')
+
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+		}
+		respondWithJSON(w, http.StatusOK, string(output))
+	case "POST":
+		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
+	case "DELETE":
+		respondWithError(w, http.StatusNotImplemented, "cannot DELETE this endpoint!")
+	}
+}
+
 // utils
 
 func (s *Server) validate(namespace string, data []byte) error {
 	// if namespace has a schema, validate against it
-	schemaJson, err := s.db.Get(namespace+SchemaId, SchemaId)
-	if err == nil {
+	schemaJson, dbErr := s.db.Get(namespace+SchemaId, SchemaId)
+	if dbErr == nil {
 		schemaLoader := gojsonschema.NewBytesLoader(schemaJson)
 		documentLoader := gojsonschema.NewBytesLoader(data)
 
@@ -281,7 +337,7 @@ func (s *Server) validate(namespace string, data []byte) error {
 	} else {
 		// otherwise just validate as json
 		var parsed interface{}
-		err = json.Unmarshal(data, &parsed)
+		err := json.Unmarshal(data, &parsed)
 		if err != nil {
 			log.Printf("The document is not valid JSON")
 			return err

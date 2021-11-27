@@ -21,32 +21,51 @@ func (s *StorageDatabase) Init() {
 	}
 }
 
-func (s *StorageDatabase) Upsert(namespace string, key string, value []byte) error {
+func (s *StorageDatabase) Upsert(namespace string, key string, value []byte) *DbError {
 	err := s.ensureNamespace(namespace)
 	if err != nil {
-		return err
+		return &DbError {
+			ErrorCode: FILESYSTEM_ERROR,
+			Message: fmt.Sprintf("%v", err),
+		}
 	}
 	filePath := s.getFilePath(namespace, key)
 
-	_, err = os.Stat(filePath)
-	if err == nil || errors.Is(err, os.ErrNotExist) {
+	_, statErr := os.Stat(filePath)
+	if statErr == nil || errors.Is(statErr, os.ErrNotExist) {
 		err = os.WriteFile(filePath, value, os.ModePerm)
-		return err
+		if err != nil {
+			return &DbError {
+				ErrorCode: FILESYSTEM_ERROR,
+				Message: err.Error(),
+			}
+		}
 	}
-	return err
+	return nil
 }
 
-func (s *StorageDatabase) Get(namespace string, key string) ([]byte, error) {
+func (s *StorageDatabase) Get(namespace string, key string) ([]byte, *DbError) {
 	filePath := s.getFilePath(namespace, key)
-	return ioutil.ReadFile(filepath.Clean(filePath))
+	bytes, err := ioutil.ReadFile(filepath.Clean(filePath))
+	if err != nil {
+		return nil, &DbError {
+			ErrorCode: FILESYSTEM_ERROR,
+			Message: fmt.Sprintf("%v", err),
+		}
+	} else {
+		return bytes, nil
+	}
 }
 
-func (s *StorageDatabase) GetAll(namespace string) (map[string][]byte, error) {
+func (s *StorageDatabase) GetAll(namespace string) (map[string][]byte, *DbError) {
 	result := make(map[string][]byte)
 
-	docs, err := ioutil.ReadDir(s.getNamespacePath(namespace))
-	if err != nil {
-		return nil, err
+	docs, readDirErr := ioutil.ReadDir(s.getNamespacePath(namespace))
+	if readDirErr != nil {
+		return nil, &DbError {
+			ErrorCode: FILESYSTEM_ERROR,
+			Message: fmt.Sprintf("%v", readDirErr),
+		}
 	}
 	for _, doc := range docs {
 		keyParts := strings.SplitN(doc.Name(), ".", 2)
@@ -54,6 +73,7 @@ func (s *StorageDatabase) GetAll(namespace string) (map[string][]byte, error) {
 			continue
 		}
 		rawKey := keyParts[0]
+		var err *DbError
 		result[rawKey], err = s.Get(namespace, rawKey)
 		if err != nil {
 			return nil, err
@@ -63,19 +83,40 @@ func (s *StorageDatabase) GetAll(namespace string) (map[string][]byte, error) {
 	return result, nil
 }
 
-func (s *StorageDatabase) Delete(namespace string, key string) error {
+func (s *StorageDatabase) Delete(namespace string, key string) *DbError {
 	filePath := s.getFilePath(namespace, key)
 
 	_, err := os.Stat(filePath)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
+	if err != nil {
+		return &DbError {
+			ErrorCode: ID_NOT_FOUND,
+			Message:   fmt.Sprintf("value not found in namespace '%v' for key '%v'", namespace, key),
+		}
 	}
 
-	return os.Remove(filePath)
+	err = os.Remove(filePath)
+
+	if err != nil {
+		return &DbError {
+			ErrorCode: FILESYSTEM_ERROR,
+			Message: fmt.Sprintf("%v", err),
+		}
+	} else {
+		return nil
+	}
 }
 
-func (s *StorageDatabase) DeleteAll(namespace string) error {
-	return os.RemoveAll(s.getNamespacePath(namespace))
+func (s *StorageDatabase) DeleteAll(namespace string) *DbError {
+	err := os.RemoveAll(s.getNamespacePath(namespace))
+
+	if err != nil {
+		return &DbError {
+			ErrorCode: FILESYSTEM_ERROR,
+			Message: fmt.Sprintf("%v", err),
+		}
+	} else {
+		return nil
+	}
 }
 
 func (s *StorageDatabase) GetNamespaces() []string {
