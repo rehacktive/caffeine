@@ -128,7 +128,7 @@ After you add some data, you can generate the specs with:
 ```sh
 curl -X GET http://localhost:8000/openapi.json
 ```
-You can then paste the JSON here: https://editor.swagger.io and even use it interactively!
+or you can just go to https://localhost:8000/swaggerui/ and even use it interactively!
 
 ## Schema Validation
 
