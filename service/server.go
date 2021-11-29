@@ -50,8 +50,9 @@ func (s *Server) Init(db Database) {
 	s.db.Init()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},                                                // All origins
-		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodDelete}, // Allowing only get, just an example
+		AllowedOrigins: []string{"*"}, // All origins
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+		AllowedHeaders: []string{"X-Content-Type", "text/plain"},
 	})
 
 	s.router = mux.NewRouter()
@@ -61,6 +62,7 @@ func (s *Server) Init(db Database) {
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
 	s.router.HandleFunc(OpenAPIPattern, s.openAPIHandler)
+	s.router.PathPrefix("/swaggerui/").Handler(http.StripPrefix("/swaggerui/", http.FileServer(http.Dir("./swagger-ui/"))))
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
