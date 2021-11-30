@@ -178,6 +178,7 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 		if hasSchema {
 			getNamespaceSchema := map[string]interface{}{
 				"type": "array",
+				"title": fmt.Sprintf("Get All %v", namespace),
 				"items": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
