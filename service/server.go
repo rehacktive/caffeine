@@ -294,7 +294,10 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	var namespaces []string = s.db.GetNamespaces()
 
-	rootMap := generateOpenAPIMap(namespaces)
+	rootMap, err := s.generateOpenAPIMap(namespaces)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	}
 
 	switch r.Method {
 	case http.MethodGet:

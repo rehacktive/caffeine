@@ -1,9 +1,14 @@
 package service
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
 
-func generateOpenAPIMap(namespaces []string) map[string]interface{} {
+func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}, error) {
 	pathsMap := map[string]interface{}{}
+	schemasMap := map[string]interface{}{}
 
 	rootMap := map[string]interface{}{
 		"openapi": "3.0.1",
@@ -25,9 +30,42 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 	}
 
 	for _, namespace := range namespaces {
+		if strings.HasSuffix(namespace, SchemaId) {
+			continue
+		}
+
 		path := fmt.Sprintf("/ns/%s/{id}", namespace)
 		namespacePath := fmt.Sprintf("/ns/%s", namespace)
 		searchPath := fmt.Sprintf("/search/%s", namespace)
+
+		var hasSchema = false
+		var schemaNode = map[string]interface{}{}
+		var schemaRef = ""
+
+		// if namespace has a schema, add it to the schemas map
+		schemaJson, dbErr := s.db.Get(namespace+SchemaId, SchemaId)
+
+		if dbErr != nil {
+			//Ignore
+		} else {
+			parsedSchema := map[string]interface{}{}
+			err := json.Unmarshal(schemaJson, &parsedSchema)
+
+			if err != nil {
+				return nil, err
+			}
+
+			schemasMap[namespace] = parsedSchema
+			schemaRef = fmt.Sprintf("#/components/schemas/%v", namespace)
+
+			schemaNode = map[string]interface{}{
+				"schema": map[string]interface{}{
+					"$ref": schemaRef,
+				},
+			}
+
+			hasSchema = true
+		}
 
 		getOperationMap := map[string]interface{}{
 			"description": fmt.Sprintf("Get %v by id.", namespace),
@@ -52,7 +90,7 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
-						"application/json": map[string]interface{}{},
+						"application/json": schemaNode,
 					},
 				},
 				"404": map[string]interface{}{
@@ -79,9 +117,7 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 			},
 			"requestBody": map[string]interface{}{
 				"content": map[string]interface{}{
-					"application/json": map[string]interface{}{
-						"schema": map[string]interface{}{},
-					},
+					"application/json": schemaNode,
 				},
 			},
 			"responses": map[string]interface{}{
@@ -137,6 +173,27 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 			"delete": deleteOperationMap,
 		}
 
+		var getNamespaceSchemaNode = map[string]interface{}{}
+
+		if hasSchema {
+			getNamespaceSchemaNode = map[string]interface{}{
+				"schema": map[string]interface{}{
+					"type":  "array",
+					"items": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"key": map[string]interface{}{
+								"type": "string",
+							},
+							"value": map[string]interface{}{
+								"$ref": schemaRef,
+							},
+						},
+					},
+				},
+			}
+		}
+
 		getNamespaceOperationMap := map[string]interface{}{
 			"description": fmt.Sprintf("Get all values for the namespace '%v'.", namespace),
 			"tags": []interface{}{
@@ -151,7 +208,7 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
-						"application/json": map[string]interface{}{},
+						"application/json": getNamespaceSchemaNode,
 					},
 				},
 			},
@@ -182,6 +239,32 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 			"delete": deleteNamespaceOperationMap,
 		}
 
+		var searchSchemaNode = map[string]interface{}{}
+
+		if hasSchema {
+			searchSchemaNode = map[string]interface{} {
+				"schema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"results": map[string]interface{}{
+							"type": "array",
+							"items": map[string]interface{}{
+								"type": "object",
+								"properties": map[string]interface{}{
+									"key": map[string]interface{}{
+										"type": "string",
+									},
+									"value": map[string]interface{}{
+										"$ref": schemaRef,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+
 		searchOperationMap := map[string]interface{}{
 			"description": fmt.Sprintf("Search namespace '%v' by property (jq syntax).", namespace),
 			"tags": []interface{}{
@@ -193,7 +276,7 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 					"name": "filter",
 					"schema": map[string]interface{}{
 						"type":    "string",
-						"example": `select(.name=="jack")`,
+						"example": `select(.firstName=="Jack")`,
 					},
 				},
 			},
@@ -205,7 +288,7 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
-						"application/json": map[string]interface{}{},
+						"application/json": searchSchemaNode,
 					},
 				},
 			},
@@ -239,5 +322,12 @@ func generateOpenAPIMap(namespaces []string) map[string]interface{} {
 	pathsMap["/ns"] = map[string]interface{}{
 		"get": getAllNamespacesOperationMap,
 	}
-	return rootMap
+
+	if len(schemasMap) != 0 {
+		rootMap["components"] = map[string]interface{}{
+			"schemas": schemasMap,
+		}
+	}
+
+	return rootMap, nil
 }
