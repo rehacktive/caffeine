@@ -176,20 +176,29 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 		var getNamespaceSchemaNode = map[string]interface{}{}
 
 		if hasSchema {
-			getNamespaceSchemaNode = map[string]interface{}{
-				"schema": map[string]interface{}{
-					"type":  "array",
-					"items": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
-							"key": map[string]interface{}{
-								"type": "string",
-							},
-							"value": map[string]interface{}{
-								"$ref": schemaRef,
-							},
+			getNamespaceSchema := map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"key": map[string]interface{}{
+							"type": "string",
+						},
+						"value": map[string]interface{}{
+							"$ref": schemaRef,
 						},
 					},
+				},
+			}
+
+
+			componentKey := fmt.Sprintf("get-all-%v", namespace)
+			schemasMap[componentKey] = getNamespaceSchema
+			getNamespaceSchemaRef := fmt.Sprintf("#/components/schemas/%v", componentKey)
+
+			getNamespaceSchemaNode = map[string]interface{}{
+				"schema": map[string]interface{}{
+					"$ref": getNamespaceSchemaRef,
 				},
 			}
 		}
@@ -242,25 +251,33 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 		var searchSchemaNode = map[string]interface{}{}
 
 		if hasSchema {
-			searchSchemaNode = map[string]interface{} {
-				"schema": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"results": map[string]interface{}{
-							"type": "array",
-							"items": map[string]interface{}{
-								"type": "object",
-								"properties": map[string]interface{}{
-									"key": map[string]interface{}{
-										"type": "string",
-									},
-									"value": map[string]interface{}{
-										"$ref": schemaRef,
-									},
+			searchSchema := map[string]interface{} {
+				"title": fmt.Sprintf("Search %v", namespace),
+				"properties": map[string]interface{}{
+					"results": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"key": map[string]interface{}{
+									"type": "string",
+								},
+								"value": map[string]interface{}{
+									"$ref": schemaRef,
 								},
 							},
 						},
 					},
+				},
+			}
+
+			componentKey := fmt.Sprintf("search-%v", namespace)
+			schemasMap[componentKey] = searchSchema
+			searchSchemaRef := fmt.Sprintf("#/components/schemas/%v", componentKey)
+
+			searchSchemaNode = map[string]interface{}{
+				"schema": map[string]interface{}{
+					"$ref": searchSchemaRef,
 				},
 			}
 		}
