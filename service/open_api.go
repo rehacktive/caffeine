@@ -83,10 +83,6 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 				},
 			},
 			"responses": map[string]interface{}{
-				"default": map[string]interface{}{
-					"description": "default response",
-					"content":     map[string]interface{}{},
-				},
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
@@ -121,14 +117,10 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 				},
 			},
 			"responses": map[string]interface{}{
-				"default": map[string]interface{}{
-					"description": "default response",
-					"content":     map[string]interface{}{},
-				},
 				"201": map[string]interface{}{
 					"description": "201 Created",
 					"content": map[string]interface{}{
-						"application/json": map[string]interface{}{},
+						"application/json": schemaNode,
 					},
 				},
 			},
@@ -150,10 +142,6 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 				},
 			},
 			"responses": map[string]interface{}{
-				"default": map[string]interface{}{
-					"description": "default response",
-					"content":     map[string]interface{}{},
-				},
 				"202": map[string]interface{}{
 					"description": "200 Accepted",
 					"content": map[string]interface{}{
@@ -211,10 +199,6 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 			},
 			"parameters": []interface{}{},
 			"responses": map[string]interface{}{
-				"default": map[string]interface{}{
-					"description": "default response",
-					"content":     map[string]interface{}{},
-				},
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
@@ -231,10 +215,6 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 			},
 			"parameters": []interface{}{},
 			"responses": map[string]interface{}{
-				"default": map[string]interface{}{
-					"description": "default response",
-					"content":     map[string]interface{}{},
-				},
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
@@ -299,10 +279,6 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 				},
 			},
 			"responses": map[string]interface{}{
-				"default": map[string]interface{}{
-					"description": "default response",
-					"content":     map[string]interface{}{},
-				},
 				"200": map[string]interface{}{
 					"description": "200 OK",
 					"content": map[string]interface{}{
@@ -324,10 +300,6 @@ func (s *Server) generateOpenAPIMap(namespaces []string) (map[string]interface{}
 		},
 		"parameters": []interface{}{},
 		"responses": map[string]interface{}{
-			"default": map[string]interface{}{
-				"description": "default response",
-				"content":     map[string]interface{}{},
-			},
 			"200": map[string]interface{}{
 				"description": "200 OK",
 				"content": map[string]interface{}{
