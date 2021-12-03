@@ -4,12 +4,12 @@ A very basic REST service for JSON data - enough for prototyping and MVPs!
 Features:
 - no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
+- realtime notifications
 - schema validation
 - autogenerates Swagger/OpenAPI specs
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
 - CORS enabled
 - easy to deploy as container
-
 
 Currently supports:
   - in memory database
@@ -119,6 +119,22 @@ Search by property (jq syntax)
     }
   ]
 }
+```
+## Realtime Notifications
+
+Using HTTP Server Sent Events (SSE) you can get notified when data changes, just need to listen from the /broker endpoint:
+
+```sh
+curl http://localhost:8000/broker
+```
+
+and for every insert or delete an event will be triggered:
+
+```sh
+{"event":"ITEM_ADDED","namespace":"test","key":"1","value":{"name":"john"}}
+...
+{"event":"ITEM_DELETED","namespace":"test","key":"1"}
+...
 ```
 
 ## Swagger/OpenAPI specs

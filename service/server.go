@@ -32,7 +32,13 @@ const (
 	SearchPattern    = "/search/{namespace:[a-zA-Z0-9]+}"
 	SchemaPattern    = "/schema/{namespace:[a-zA-Z0-9]+}"
 	OpenAPIPattern   = "/{openapi|swagger}.json"
+	BrokerPattern    = "/broker"
+	SwaggerUIPattern = "/swaggerui/"
 	SchemaId         = "_schema"
+
+	EVENT_ITEM_ADDED        = "ITEM_ADDED"
+	EVENT_ITEM_DELETED      = "ITEM_DELETED"
+	EVENT_NAMESPACE_DELETED = "NAMESPACE_DELETED"
 )
 
 var (
@@ -43,6 +49,7 @@ type Server struct {
 	Address string
 	router  *mux.Router
 	db      Database
+	broker  *Broker
 }
 
 func (s *Server) Init(db Database) {
@@ -55,6 +62,8 @@ func (s *Server) Init(db Database) {
 		AllowedHeaders: []string{"X-Content-Type", "text/plain"},
 	})
 
+	s.broker = NewServer()
+
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/ns", s.homeHandler)
 	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)
@@ -62,7 +71,8 @@ func (s *Server) Init(db Database) {
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
 	s.router.HandleFunc(OpenAPIPattern, s.openAPIHandler)
-	s.router.PathPrefix("/swaggerui/").Handler(http.StripPrefix("/swaggerui/", http.FileServer(http.Dir("./swagger-ui/"))))
+	s.router.PathPrefix(SwaggerUIPattern).Handler(http.StripPrefix(SwaggerUIPattern, http.FileServer(http.Dir("./swagger-ui/"))))
+	s.router.Handle(BrokerPattern, s.broker)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
 	srv := &http.Server{
@@ -122,6 +132,12 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 				respondWithError(w, http.StatusInternalServerError, dbErr.Error())
 			}
 		}
+		s.Notify(BrokerEvent{
+			Event:     EVENT_NAMESPACE_DELETED,
+			Namespace: namespace,
+			Key:       "",
+			Value:     nil,
+		})
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
 }
@@ -144,7 +160,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		err = s.validate(namespace, data)
+		parsedData, err := s.validate(namespace, data)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
@@ -159,6 +175,12 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		s.Notify(BrokerEvent{
+			Event:     EVENT_ITEM_ADDED,
+			Namespace: namespace,
+			Key:       key,
+			Value:     parsedData,
+		})
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
 		data, dbErr := s.db.Get(namespace, key)
@@ -188,6 +210,12 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		s.Notify(BrokerEvent{
+			Event:     EVENT_ITEM_DELETED,
+			Namespace: namespace,
+			Key:       key,
+			Value:     nil,
+		})
 		respondWithJSON(w, http.StatusAccepted, "{}")
 	}
 }
@@ -317,7 +345,9 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 // utils
 
-func (s *Server) validate(namespace string, data []byte) error {
+func (s *Server) validate(namespace string, data []byte) (interface{}, error) {
+	var parsed interface{}
+
 	// if namespace has a schema, validate against it
 	schemaJson, dbErr := s.db.Get(namespace+SchemaId, SchemaId)
 	if dbErr == nil {
@@ -326,11 +356,11 @@ func (s *Server) validate(namespace string, data []byte) error {
 
 		result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if result.Valid() {
-			// noop
+			json.Unmarshal(data, &parsed)
 		} else {
 			log.Printf("The document is not valid according to its schema. see errors :")
 			errorLog := ""
@@ -338,16 +368,22 @@ func (s *Server) validate(namespace string, data []byte) error {
 				errorLog = errorLog + desc.String()
 			}
 			log.Println(errorLog)
-			return errors.New(errorLog)
+			return nil, errors.New(errorLog)
 		}
 	} else {
 		// otherwise just validate as json
-		var parsed interface{}
 		err := json.Unmarshal(data, &parsed)
 		if err != nil {
 			log.Printf("The document is not valid JSON")
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return parsed, nil
+}
+
+func (s *Server) Notify(event BrokerEvent) {
+	if s.broker != nil {
+		jsonData, _ := json.Marshal(event)
+		s.broker.Notifier <- []byte(jsonData)
+	}
 }
