@@ -42,4 +42,16 @@ Now you're ready to interact with Caffeine. For example, to store a new value, t
 curl -H "Authorization: Bearer YOUR_TOKEN" -X POST -d '{"name":"john"}' http://localhost:8000/ns/test/1
 ```
 
+when queried, the response contains also the user_id that created the content:
+
+```sh
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8000/ns/test/1
+
+{
+  "user_id": "aw4y",
+  "data": {
+    "name": "john"
+  }
+}
+```
 

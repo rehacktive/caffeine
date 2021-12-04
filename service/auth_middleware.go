@@ -10,6 +10,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const (
+	USER_HEADER = "USER_HEADER"
+)
+
 type JWTAuthMiddleware struct {
 	VerifyBytes []byte
 }
@@ -30,9 +34,7 @@ func (m *JWTAuthMiddleware) GetMiddleWare(r *mux.Router) func(next http.Handler)
 				respondWithError(w, http.StatusBadRequest, err.Error())
 				return
 			}
-			// TODO
-			log.Println("jwt user: ", userId)
-
+			req.Header.Add("USER_HEADER", userId)
 			next.ServeHTTP(w, req)
 		})
 	}

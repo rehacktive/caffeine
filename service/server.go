@@ -40,7 +40,7 @@ const (
 	EVENT_ITEM_DELETED      = "ITEM_DELETED"
 	EVENT_NAMESPACE_DELETED = "NAMESPACE_DELETED"
 
-	certsPublicKey = "../certs/public-cert.pem"
+	certsPublicKey = "./certs/public-cert.pem"
 )
 
 var (
@@ -161,6 +161,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
+	userId := r.Header.Get(USER_HEADER)
 
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
@@ -180,6 +181,21 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
+		if s.AuthEnabled {
+			// override data with a payload
+			payload := Payload{
+				User: userId,
+				Data: parsedData,
+			}
+			data, err = payload.wrap()
+
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
 		dbErr := s.db.Upsert(namespace, key, data)
 		if dbErr != nil {
 			switch dbErr.ErrorCode {
