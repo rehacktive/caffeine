@@ -113,6 +113,7 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
+	userId := r.Header.Get(USER_HEADER)
 
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
@@ -149,6 +150,7 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Notify(BrokerEvent{
 			Event:     EVENT_NAMESPACE_DELETED,
+			User:      userId,
 			Namespace: namespace,
 			Key:       "",
 			Value:     nil,
@@ -208,6 +210,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Notify(BrokerEvent{
 			Event:     EVENT_ITEM_ADDED,
+			User:      userId,
 			Namespace: namespace,
 			Key:       key,
 			Value:     parsedData,
@@ -243,6 +246,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Notify(BrokerEvent{
 			Event:     EVENT_ITEM_DELETED,
+			User:      userId,
 			Namespace: namespace,
 			Key:       key,
 			Value:     nil,
