@@ -23,7 +23,7 @@ The public pem **needs** to be stored in certs/public-cert.pem
 
 * generate a valid JWT token:
 
-go to https://jwt.io and paste your private and public keys (no worries, it works offline) and add a user id in the payload:
+go to https://jwt.io and paste your private and public keys (no worries, it works offline) and add a user id (jti) in the payload:
 
 ```json
 {
@@ -34,6 +34,8 @@ go to https://jwt.io and paste your private and public keys (no worries, it work
 ```
 
 copy the encoded value generated.
+
+Altenatively, you can write your own code to manage users and generate JWT tokens for them.
 
 Now you're ready to interact with Caffeine. For example, to store a new value, the call should be something like:
 

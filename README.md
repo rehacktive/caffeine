@@ -4,6 +4,7 @@ A very basic REST service for JSON data - enough for prototyping and MVPs!
 Features:
 - no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
+- JWT authentication
 - realtime notifications
 - schema validation
 - autogenerates Swagger/OpenAPI specs
@@ -17,6 +18,8 @@ Currently supports:
   - filesystem storage
 
 For a sample Vue app using caffeine see: https://gist.github.com/calogxro/6e601e07c2a937df4418d104fb717570
+
+
 
 ## How to
 
@@ -120,6 +123,11 @@ Search by property (jq syntax)
   ]
 }
 ```
+
+## JWT Authentication 
+
+There's an "experimental" implementation of JWT authentication. See [documentantion about JWT](JWT.md)
+
 ## Realtime Notifications
 
 Using HTTP Server Sent Events (SSE) you can get notified when data changes, just need to listen from the /broker endpoint:
