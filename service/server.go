@@ -39,6 +39,8 @@ const (
 	EVENT_ITEM_ADDED        = "ITEM_ADDED"
 	EVENT_ITEM_DELETED      = "ITEM_DELETED"
 	EVENT_NAMESPACE_DELETED = "NAMESPACE_DELETED"
+
+	certsPublicKey = "../certs/public-cert.pem"
 )
 
 var (
@@ -46,10 +48,11 @@ var (
 )
 
 type Server struct {
-	Address string
-	router  *mux.Router
-	db      Database
-	broker  *Broker
+	Address     string
+	AuthEnabled bool
+	router      *mux.Router
+	db          Database
+	broker      *Broker
 }
 
 func (s *Server) Init(db Database) {
@@ -74,6 +77,18 @@ func (s *Server) Init(db Database) {
 	s.router.PathPrefix(SwaggerUIPattern).Handler(http.StripPrefix(SwaggerUIPattern, http.FileServer(http.Dir("./swagger-ui/"))))
 	s.router.Handle(BrokerPattern, s.broker)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
+
+	if s.AuthEnabled {
+		verifyBytes, err := ioutil.ReadFile(certsPublicKey)
+		if err != nil {
+			log.Fatal("auth required but error on reading public key for JWT: ", err)
+		}
+		middleware := JWTAuthMiddleware{
+			VerifyBytes: verifyBytes,
+		}
+		s.router.Use(middleware.GetMiddleWare(s.router))
+		log.Println("authentication middleware enabled")
+	}
 
 	srv := &http.Server{
 		Handler:      c.Handler(s.router),

@@ -27,26 +27,30 @@ const (
 	FS     = "fs"
 
 	// env
-	envHostPort = "IP_PORT"
-	envDbType   = "DB_TYPE"
-	envPgHost   = "PG_HOST"
-	envPgUser   = "PG_USER"
-	envPgPass   = "PG_PASS"
-	envFSRoot   = "FS_ROOT"
+	envHostPort    = "IP_PORT"
+	envDbType      = "DB_TYPE"
+	envPgHost      = "PG_HOST"
+	envPgUser      = "PG_USER"
+	envPgPass      = "PG_PASS"
+	envFSRoot      = "FS_ROOT"
+	envAuthEnabled = "AUTH_ENABLED"
 )
 
 func main() {
 	var addr, dbType, pgHost, pgUser, pgPass, fsRoot string
+	var authEnabled bool
 	flag.StringVar(&addr, envHostPort, ":8000", "ip:port to expose")
 	flag.StringVar(&dbType, envDbType, MEMORY, "db type to use, options: memory | postgres | fs")
 	flag.StringVar(&pgHost, envPgHost, "0.0.0.0", "postgres host (port is 5432)")
 	flag.StringVar(&pgUser, envPgUser, "", "postgres user")
 	flag.StringVar(&pgPass, envPgPass, "", "postgres password")
 	flag.StringVar(&fsRoot, envFSRoot, "./data", "path of the file storage root")
+	flag.BoolVar(&authEnabled, envAuthEnabled, false, "enable JWT auth")
 	flag.Parse()
 
 	server := service.Server{
-		Address: addr,
+		Address:     addr,
+		AuthEnabled: authEnabled,
 	}
 
 	var db service.Database
