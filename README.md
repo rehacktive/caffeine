@@ -126,7 +126,7 @@ Search by property (jq syntax)
 
 ## JWT Authentication 
 
-There's an "experimental" implementation of JWT authentication. See [documentantion about JWT](JWT.md)
+There's an first implementation of JWT authentication. See [documentation about JWT](JWT.md)
 
 ## Realtime Notifications
 
