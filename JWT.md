@@ -1,7 +1,7 @@
 ## How the authentication works in Caffeine
 
 
-If the right env variable is passed like:
+If auth is enabled via env variable/param:
 
 ```sh
 AUTH_ENABLED=true go run caffeine.go
@@ -19,7 +19,7 @@ openssl genrsa -out certs/auth-private.pem 2048
 openssl rsa -in certs/auth-private.pem -outform PEM -pubout -out certs/public-cert.pem
 ```
 
-The public pem **needs** to be stored in certs/public-cert.pem
+The public pem **needs** to be stored in certs/public-cert.pem - store the private certificate securely.
 
 * generate a valid JWT token:
 
@@ -50,10 +50,11 @@ when queried, the response contains also the user_id that created the content:
 curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8000/ns/test/1
 
 {
-  "user_id": "aw4y",
+  "user_id": "johnd",
   "data": {
     "name": "john"
   }
 }
 ```
 
+The current implementation is for authentication only, doesn't support any form of authorization (more at https://auth0.com/docs/get-started/authentication-and-authorization)

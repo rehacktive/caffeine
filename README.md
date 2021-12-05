@@ -32,6 +32,7 @@ optional params are:
 
 ```sh
 Usage of caffeine:
+  -AUTH_ENABLED=false: enable JWT auth
   -DB_TYPE="memory": db type to use, options: memory | postgres | fs
   -FS_ROOT="./data": path of the file storage root
   -IP_PORT=":8000": ip:port to expose
