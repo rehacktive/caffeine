@@ -8,6 +8,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type Payload struct {
+	User string      `json:"user_id"`
+	Data interface{} `json:"data"`
+}
+
+func (p *Payload) wrap() (content []byte, err error) {
+	content, err = json.Marshal(p)
+	return
+}
+
 func respondWithJSON(w http.ResponseWriter, code int, jsonContent string) {
 	w.Header().Set("Content-Type", "application/json")
 

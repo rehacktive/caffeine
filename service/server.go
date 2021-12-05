@@ -39,6 +39,8 @@ const (
 	EVENT_ITEM_ADDED        = "ITEM_ADDED"
 	EVENT_ITEM_DELETED      = "ITEM_DELETED"
 	EVENT_NAMESPACE_DELETED = "NAMESPACE_DELETED"
+
+	certsPublicKey = "./certs/public-cert.pem"
 )
 
 var (
@@ -46,10 +48,11 @@ var (
 )
 
 type Server struct {
-	Address string
-	router  *mux.Router
-	db      Database
-	broker  *Broker
+	Address     string
+	AuthEnabled bool
+	router      *mux.Router
+	db          Database
+	broker      *Broker
 }
 
 func (s *Server) Init(db Database) {
@@ -75,6 +78,18 @@ func (s *Server) Init(db Database) {
 	s.router.Handle(BrokerPattern, s.broker)
 	s.router.Use(mux.CORSMethodMiddleware(s.router))
 
+	if s.AuthEnabled {
+		verifyBytes, err := ioutil.ReadFile(certsPublicKey)
+		if err != nil {
+			log.Fatal("auth required but error on reading public key for JWT: ", err)
+		}
+		middleware := JWTAuthMiddleware{
+			VerifyBytes: verifyBytes,
+		}
+		s.router.Use(middleware.GetMiddleWare(s.router))
+		log.Println("authentication middleware enabled")
+	}
+
 	srv := &http.Server{
 		Handler:      c.Handler(s.router),
 		Addr:         s.Address,
@@ -98,6 +113,7 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
+	userId := r.Header.Get(USER_HEADER)
 
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
@@ -134,6 +150,7 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Notify(BrokerEvent{
 			Event:     EVENT_NAMESPACE_DELETED,
+			User:      userId,
 			Namespace: namespace,
 			Key:       "",
 			Value:     nil,
@@ -146,6 +163,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
+	userId := r.Header.Get(USER_HEADER)
 
 	vars := mux.Vars(r)
 	namespace := vars["namespace"]
@@ -165,6 +183,21 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
+		if s.AuthEnabled {
+			// override data with a payload
+			payload := Payload{
+				User: userId,
+				Data: parsedData,
+			}
+			data, err = payload.wrap()
+
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
 		dbErr := s.db.Upsert(namespace, key, data)
 		if dbErr != nil {
 			switch dbErr.ErrorCode {
@@ -177,6 +210,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Notify(BrokerEvent{
 			Event:     EVENT_ITEM_ADDED,
+			User:      userId,
 			Namespace: namespace,
 			Key:       key,
 			Value:     parsedData,
@@ -212,6 +246,7 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Notify(BrokerEvent{
 			Event:     EVENT_ITEM_DELETED,
+			User:      userId,
 			Namespace: namespace,
 			Key:       key,
 			Value:     nil,

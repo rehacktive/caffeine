@@ -43,6 +43,7 @@ type Broker struct {
 
 type BrokerEvent struct {
 	Event     string      `json:"event"`
+	User      string      `json:"user_id,omitempty"`
 	Namespace string      `json:"namespace"`
 	Key       string      `json:"key,omitempty"`
 	Value     interface{} `json:"value,omitempty"`
