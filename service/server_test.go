@@ -256,3 +256,12 @@ func Test_UnitTest_StorageDb(t *testing.T) {
 	testHandlers(db, t)
 	os.RemoveAll("/tmp/caffeine_test1")
 }
+
+func Test_UnitTest_SQLiteDb(t *testing.T) {
+	os.MkdirAll("/tmp/caffeine", os.ModePerm)
+	db := &database.SQLiteDatabase{
+		DirPath: "/tmp/caffeine",
+	}
+	testHandlers(db, t)
+	os.RemoveAll("/tmp/caffeine")
+}
