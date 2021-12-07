@@ -13,7 +13,8 @@ Features:
 - easy to deploy as container
 
 Currently supports:
-  - in memory database
+  - in memory database (map)
+  - sqlite
   - postgres
   - filesystem storage
 
@@ -33,8 +34,8 @@ optional params are:
 ```sh
 Usage of caffeine:
   -AUTH_ENABLED=false: enable JWT auth
-  -DB_TYPE="memory": db type to use, options: memory | postgres | fs
-  -FS_ROOT="./data": path of the file storage root
+  -DB_TYPE="memory": db type to use, options: memory | postgres | fs | sqlite
+  -DB_PATH="./data": path of the file storage root or sqlite database
   -IP_PORT=":8000": ip:port to expose
   -PG_HOST="0.0.0.0": postgres host (port is 5432)
   -PG_PASS="": postgres password

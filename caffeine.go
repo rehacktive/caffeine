@@ -25,6 +25,7 @@ const (
 	MEMORY = "memory"
 	PG     = "postgres"
 	FS     = "fs"
+	SQLITE = "sqlite"
 
 	// env
 	envHostPort    = "IP_PORT"
@@ -32,19 +33,19 @@ const (
 	envPgHost      = "PG_HOST"
 	envPgUser      = "PG_USER"
 	envPgPass      = "PG_PASS"
-	envFSRoot      = "FS_ROOT"
+	envDbPath      = "DB_PATH"
 	envAuthEnabled = "AUTH_ENABLED"
 )
 
 func main() {
-	var addr, dbType, pgHost, pgUser, pgPass, fsRoot string
+	var addr, dbType, pgHost, pgUser, pgPass, dbPath string
 	var authEnabled bool
 	flag.StringVar(&addr, envHostPort, ":8000", "ip:port to expose")
 	flag.StringVar(&dbType, envDbType, MEMORY, "db type to use, options: memory | postgres | fs")
 	flag.StringVar(&pgHost, envPgHost, "0.0.0.0", "postgres host (port is 5432)")
 	flag.StringVar(&pgUser, envPgUser, "", "postgres user")
 	flag.StringVar(&pgPass, envPgPass, "", "postgres password")
-	flag.StringVar(&fsRoot, envFSRoot, "./data", "path of the file storage root")
+	flag.StringVar(&dbPath, envDbPath, "./data", "path of the file storage root or sqlite")
 	flag.BoolVar(&authEnabled, envAuthEnabled, false, "enable JWT auth")
 	flag.Parse()
 
@@ -65,7 +66,11 @@ func main() {
 		}
 	case FS:
 		db = &database.StorageDatabase{
-			RootDirPath: fsRoot,
+			RootDirPath: dbPath,
+		}
+	case SQLITE:
+		db = &database.SQLiteDatabase{
+			DirPath: dbPath,
 		}
 	}
 	go server.Init(db)
