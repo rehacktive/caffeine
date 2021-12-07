@@ -1,7 +1,7 @@
 # caffeine - minimum viable backend
 A very basic REST service for JSON data - enough for prototyping and MVPs!
 
-Features:
+**Features**:
 - no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
 - JWT authentication
@@ -12,7 +12,7 @@ Features:
 - CORS enabled
 - easy to deploy as container
 
-Currently supports:
+**Currently supports**:
   - in memory database (map)
   - sqlite
   - postgres
@@ -31,7 +31,7 @@ go run caffeine.go
 ```
 optional params are:
 
-```sh
+```
 Usage of caffeine:
   -AUTH_ENABLED=false: enable JWT auth
   -DB_TYPE="memory": db type to use, options: memory | postgres | fs | sqlite
