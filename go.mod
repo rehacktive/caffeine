@@ -8,9 +8,10 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/itchyny/gojq v0.12.5
 	github.com/lib/pq v1.10.3
-	github.com/mattn/go-sqlite3 v1.14.9 // indirect
+	github.com/mattn/go-sqlite3 v1.14.9
 	github.com/namsral/flag v1.7.4-pre
 	github.com/opencontainers/image-spec v1.0.2 // indirect
+	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/rs/cors v1.8.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/testcontainers/testcontainers-go v0.12.0
