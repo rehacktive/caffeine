@@ -31,7 +31,7 @@ func (p *PGDatabase) Init() {
 	db, err := sql.Open("postgres", connInfo)
 
 	if err != nil {
-		log.Fatal("error connecting to postgres: ", err)
+		log.Fatalf("error connecting to postgres: %v", err)
 	}
 
 	_, err = db.Exec("create database " + pg_dbName)
@@ -139,17 +139,18 @@ func (p PGDatabase) DeleteAll(namespace string) *DbError {
 }
 
 func (p PGDatabase) GetNamespaces() []string {
-	ret := []string{}
 	rows, err := p.db.Query(pg_tablesQuery)
 	if err != nil {
-		log.Println("error on GetNamespaces: ", err)
+		log.Printf("error on GetNamespaces: %v\n", err)
 	}
 	defer rows.Close()
+
+	ret := make([]string, 0)
 	for rows.Next() {
 		var tableName string
 		err = rows.Scan(&tableName)
 		if err != nil {
-			log.Println("Scan: ", err)
+			log.Printf("error on Scan: %v\n", err)
 		}
 		ret = append(ret, tableName)
 	}
@@ -161,7 +162,7 @@ func (p PGDatabase) ensureNamespace(namespace string) (err error) {
 	_, err = p.db.Exec(query)
 
 	if err != nil {
-		log.Println("error creating table: ", err)
+		log.Printf("error creating table: %v\n", err)
 	}
 
 	return err

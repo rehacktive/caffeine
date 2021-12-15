@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+
 	"github.com/rehacktive/caffeine/database"
 )
 
@@ -147,7 +148,7 @@ var tests = []testCase{
 				return err
 			}
 			if string(value) != jsonPayload {
-				fmt.Errorf("Expected %v got %s", jsonPayload, string(value))
+				return fmt.Errorf("expected %v got %s", jsonPayload, string(value))
 			}
 			return nil
 		},
