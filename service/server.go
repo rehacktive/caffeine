@@ -278,7 +278,7 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		log.Println("added schema for namespace " + vars["namespace"])
+		log.Printf("added schema for namespace '%s'\n", vars["namespace"])
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
 		data, dbErr := s.db.Get(namespace, SchemaId)

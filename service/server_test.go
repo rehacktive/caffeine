@@ -35,6 +35,24 @@ var validJsonForSchema = `{
 var invalidJsonForSchema = `{
 	"firstName":"john"
 }`
+var validSchema = `{
+  "title": "Example User Schema",
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": "string"
+    },
+    "age": {
+      "description": "Age in years",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": ["firstName", "lastName"]
+}`
 
 var tests = []testCase{
 	{
@@ -147,8 +165,8 @@ var tests = []testCase{
 			if err != nil {
 				return err
 			}
-			if string(value) != jsonPayload {
-				return fmt.Errorf("expected %v got %s", jsonPayload, string(value))
+			if string(value) != validSchema {
+				return fmt.Errorf("expected %v got %s", validSchema, string(value))
 			}
 			return nil
 		},
