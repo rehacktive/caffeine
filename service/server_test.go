@@ -36,24 +36,6 @@ var validJsonForSchema = `{
 var invalidJsonForSchema = `{
 	"firstName":"john"
 }`
-var validSchema = `{
-  "title": "Example User Schema",
-  "type": "object",
-  "properties": {
-    "firstName": {
-      "type": "string"
-    },
-    "lastName": {
-      "type": "string"
-    },
-    "age": {
-      "description": "Age in years",
-      "type": "integer",
-      "minimum": 0
-    }
-  },
-  "required": ["firstName", "lastName"]
-}`
 
 var tests = []testCase{
 	{
@@ -167,7 +149,7 @@ var tests = []testCase{
 			if err != nil {
 				return err
 			}
-			if diff := cmp.Diff(validSchema, string(value)); diff != "" {
+			if diff := cmp.Diff(getUserSchema(), string(value)); diff != "" {
 				return fmt.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 
