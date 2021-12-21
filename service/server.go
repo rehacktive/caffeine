@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rehacktive/caffeine/database"
-
 	"github.com/gorilla/mux"
 	"github.com/itchyny/gojq"
 	"github.com/rs/cors"
 	"github.com/xeipuuv/gojsonschema"
+
+	"github.com/rehacktive/caffeine/database"
 )
 
 type Database interface {
@@ -81,7 +81,7 @@ func (s *Server) Init(db Database) {
 	if s.AuthEnabled {
 		verifyBytes, err := ioutil.ReadFile(certsPublicKey)
 		if err != nil {
-			log.Fatal("auth required but error on reading public key for JWT: ", err)
+			log.Fatalf("auth required but error on reading public key for JWT: %v", err)
 		}
 		middleware := JWTAuthMiddleware{
 			VerifyBytes: verifyBytes,
@@ -278,7 +278,7 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		log.Println("added schema for namespace " + vars["namespace"])
+		log.Printf("added schema for namespace '%s'\n", vars["namespace"])
 		respondWithJSON(w, http.StatusCreated, string(data))
 	case http.MethodGet:
 		data, dbErr := s.db.Get(namespace, SchemaId)
@@ -302,10 +302,9 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type Result struct {
+	result := struct {
 		Results []interface{} `json:"results"`
-	}
-	result := Result{
+	}{
 		Results: make([]interface{}, 0),
 	}
 
@@ -355,7 +354,7 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var namespaces []string = s.db.GetNamespaces()
+	namespaces := s.db.GetNamespaces()
 
 	rootMap, err := s.generateOpenAPIMap(namespaces)
 	if err != nil {
@@ -365,11 +364,11 @@ func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		output, err := json.MarshalIndent(rootMap, "", "  ")
-		output = append(output, '\n')
-
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 		}
+		output = append(output, '\n')
+
 		respondWithJSON(w, http.StatusOK, string(output))
 	case http.MethodPost:
 		respondWithError(w, http.StatusNotImplemented, "cannot POST to this endpoint!")
@@ -400,7 +399,7 @@ func (s *Server) validate(namespace string, data []byte) (interface{}, error) {
 			log.Printf("The document is not valid according to its schema. see errors :")
 			errorLog := ""
 			for _, desc := range result.Errors() {
-				errorLog = errorLog + desc.String()
+				errorLog += desc.String()
 			}
 			log.Println(errorLog)
 			return nil, errors.New(errorLog)
@@ -409,7 +408,7 @@ func (s *Server) validate(namespace string, data []byte) (interface{}, error) {
 		// otherwise just validate as json
 		err := json.Unmarshal(data, &parsed)
 		if err != nil {
-			log.Printf("The document is not valid JSON")
+			log.Println("The document is not valid JSON")
 			return nil, err
 		}
 	}
@@ -419,6 +418,6 @@ func (s *Server) validate(namespace string, data []byte) (interface{}, error) {
 func (s *Server) Notify(event BrokerEvent) {
 	if s.broker != nil {
 		jsonData, _ := json.Marshal(event)
-		s.broker.Notifier <- []byte(jsonData)
+		s.broker.Notifier <- jsonData
 	}
 }

@@ -114,7 +114,7 @@ func (mb *MemDatabase) GetNamespaces() []string {
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
-	ret := []string{}
+	ret := make([]string, 0)
 	for k := range mb.namespaces {
 		ret = append(ret, k)
 	}

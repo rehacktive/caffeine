@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -48,6 +49,10 @@ func jsonWrapper(payload interface{}) (content []byte, err error) {
 		}
 		r = append(r, map[string]interface{}{"key": k, "value": parsed})
 	}
+	// ensure the ascending order
+	sort.SliceStable(r, func(i, j int) bool {
+		return r[i]["key"].(string) < r[j]["key"].(string)
+	})
 	content, err = json.Marshal(r)
 	return
 }

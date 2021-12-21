@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
+
 	"github.com/rehacktive/caffeine/database"
 )
 
@@ -88,9 +90,10 @@ var tests = []testCase{
 			if err != nil {
 				return err
 			}
-			if string(value) != jsonPayload {
-				fmt.Errorf("Expected %v got %s", jsonPayload, string(value))
+			if diff := cmp.Diff(jsonPayload, string(value)); diff != "" {
+				return fmt.Errorf("mismatch (-want +got):\n%s", diff)
 			}
+
 			return nil
 		},
 	},
@@ -146,9 +149,10 @@ var tests = []testCase{
 			if err != nil {
 				return err
 			}
-			if string(value) != jsonPayload {
-				fmt.Errorf("Expected %v got %s", jsonPayload, string(value))
+			if diff := cmp.Diff(getUserSchema(), string(value)); diff != "" {
+				return fmt.Errorf("mismatch (-want +got):\n%s", diff)
 			}
+
 			return nil
 		},
 	},

@@ -27,7 +27,6 @@ import (
 )
 
 type Broker struct {
-
 	// Events are pushed to this channel by the main events-gathering routine
 	Notifier chan []byte
 
@@ -65,11 +64,8 @@ func NewServer() (broker *Broker) {
 }
 
 func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-
 	// Make sure that the writer supports flushing.
-	//
 	flusher, ok := rw.(http.Flusher)
-
 	if !ok {
 		http.Error(rw, "Streaming unsupported!", http.StatusInternalServerError)
 		return
@@ -107,7 +103,7 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// Server Sent Events compatible
 		fmt.Fprintf(rw, "%s\n\n", <-messageChan)
 
-		// Flush the data immediatly instead of buffering it for later.
+		// Flush the data immediately instead of buffering it for later.
 		flusher.Flush()
 	}
 
@@ -124,7 +120,7 @@ func (broker *Broker) listen() {
 			log.Printf("Client added. %d registered clients", len(broker.clients))
 		case s := <-broker.closingClients:
 
-			// A client has dettached and we want to
+			// A client has detached and we want to
 			// stop sending them messages.
 			delete(broker.clients, s)
 			log.Printf("Removed client. %d registered clients", len(broker.clients))
@@ -137,5 +133,4 @@ func (broker *Broker) listen() {
 			}
 		}
 	}
-
 }

@@ -21,14 +21,13 @@ const (
 
 type SQLiteDatabase struct {
 	DirPath string
-
-	db *sql.DB
+	db      *sql.DB
 }
 
 func (p *SQLiteDatabase) Init() {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("%v/%v", p.DirPath, sqlite_dbName))
 	if err != nil {
-		log.Fatal("error connecting to postgres: ", err)
+		log.Fatalf("error connecting to postgres: %v", err)
 	}
 	p.db = db
 }
@@ -131,17 +130,18 @@ func (p SQLiteDatabase) DeleteAll(namespace string) *DbError {
 }
 
 func (p SQLiteDatabase) GetNamespaces() []string {
-	ret := []string{}
 	rows, err := p.db.Query(sqlite_tablesQuery)
 	if err != nil {
-		log.Println("error on GetNamespaces: ", err)
+		log.Printf("error on GetNamespaces: %v\n", err)
 	}
 	defer rows.Close()
+
+	ret := make([]string, 0)
 	for rows.Next() {
 		var tableName string
 		err = rows.Scan(&tableName)
 		if err != nil {
-			log.Println("Scan: ", err)
+			log.Printf("error on Scan: %v\n", err)
 		}
 		ret = append(ret, tableName)
 	}
@@ -153,7 +153,7 @@ func (p SQLiteDatabase) ensureNamespace(namespace string) (err error) {
 	_, err = p.db.Exec(query)
 
 	if err != nil {
-		log.Println("error creating table: ", err)
+		log.Printf("error creating table: %v\n", err)
 	}
 
 	return err

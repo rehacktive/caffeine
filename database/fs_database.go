@@ -17,7 +17,7 @@ type StorageDatabase struct {
 func (s *StorageDatabase) Init() {
 	err := os.MkdirAll(s.RootDirPath, os.ModePerm)
 	if err != nil {
-		log.Fatal("error on StorageDatabase Init: ", err)
+		log.Fatalf("error on StorageDatabase Init: %v", err)
 	}
 }
 
@@ -95,28 +95,26 @@ func (s *StorageDatabase) Delete(namespace string, key string) *DbError {
 	}
 
 	err = os.Remove(filePath)
-
 	if err != nil {
 		return &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
 			Message:   err.Error(),
 		}
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 func (s *StorageDatabase) DeleteAll(namespace string) *DbError {
 	err := os.RemoveAll(s.getNamespacePath(namespace))
-
 	if err != nil {
 		return &DbError{
 			ErrorCode: FILESYSTEM_ERROR,
 			Message:   err.Error(),
 		}
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 func (s *StorageDatabase) GetNamespaces() []string {
@@ -124,7 +122,7 @@ func (s *StorageDatabase) GetNamespaces() []string {
 
 	namespaces, err := os.ReadDir(s.RootDirPath)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return results
 	}
 

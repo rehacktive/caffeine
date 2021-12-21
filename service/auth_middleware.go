@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -20,7 +21,7 @@ type JWTAuthMiddleware struct {
 
 func (m *JWTAuthMiddleware) GetMiddleWare(r *mux.Router) func(next http.Handler) http.Handler {
 	if len(m.VerifyBytes) == 0 {
-		log.Fatalf("cannot use the middleware without public key payload")
+		log.Fatalln("cannot use the middleware without public key payload")
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -72,7 +73,7 @@ func extractToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	authHeaderContent := strings.Split(authHeader, " ")
 	if len(authHeaderContent) != 2 {
-		return "", errors.New("token not provided or malformed")
+		return "", fmt.Errorf("token `%s` not provided or malformed", authHeader)
 	}
 	return authHeaderContent[1], nil
 }
