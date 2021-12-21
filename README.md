@@ -5,7 +5,7 @@ A very basic REST service for JSON data - enough for prototyping and MVPs!
 - no need to set up a database, all data is managed automagically*
 - REST paradigm CRUD for multiple entities/namespaces
 - JWT authentication
-- realtime notifications
+- realtime notifications (HTTP/SSE)
 - schema validation
 - autogenerates Swagger/OpenAPI specs
 - search using jq like syntax (see https://stedolan.github.io/jq/manual/)
