@@ -58,7 +58,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.BUILD_AND_DEPLOY_ACTION }}
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
