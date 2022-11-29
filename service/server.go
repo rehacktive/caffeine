@@ -62,7 +62,6 @@ func (s *Server) Init(db Database) {
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"}, // All origins
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
-		AllowedHeaders: []string{"X-Content-Type", "text/plain"},
 	})
 
 	s.broker = NewServer()
