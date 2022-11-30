@@ -10,7 +10,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/itchyny/gojq"
-	"github.com/rs/cors"
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/rehacktive/caffeine/database"
@@ -59,17 +58,12 @@ func (s *Server) Init(db Database) {
 	s.db = db
 	s.db.Init()
 
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"}, // All origins
-		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
-	})
-
 	s.broker = NewServer()
 
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/ns", s.homeHandler)
-	s.router.HandleFunc(NamespacePattern, s.namespaceHandler)
-	s.router.HandleFunc(KeyValuePattern, s.keyValueHandler)
+	s.router.HandleFunc(NamespacePattern, s.namespaceHandler).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
+	s.router.HandleFunc(KeyValuePattern, s.keyValueHandler).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	s.router.HandleFunc(SearchPattern, s.searchHandler).Queries("filter", "{filter}")
 	s.router.HandleFunc(SchemaPattern, s.schemaHandler)
 	s.router.HandleFunc(OpenAPIPattern, s.openAPIHandler)
@@ -90,7 +84,7 @@ func (s *Server) Init(db Database) {
 	}
 
 	srv := &http.Server{
-		Handler:      c.Handler(s.router),
+		Handler:      s.router,
 		Addr:         s.Address,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
@@ -109,9 +103,12 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 	if r.Method == http.MethodOptions {
 		return
 	}
+
 	userId := r.Header.Get(USER_HEADER)
 
 	vars := mux.Vars(r)
@@ -159,9 +156,12 @@ func (s *Server) namespaceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 	if r.Method == http.MethodOptions {
 		return
 	}
+
 	userId := r.Header.Get(USER_HEADER)
 
 	vars := mux.Vars(r)
@@ -255,10 +255,6 @@ func (s *Server) keyValueHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		return
-	}
-
 	vars := mux.Vars(r)
 	namespace := vars["namespace"] + SchemaId
 
@@ -297,6 +293,8 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 	if r.Method == http.MethodOptions {
 		return
 	}
@@ -349,10 +347,6 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		return
-	}
-
 	namespaces := s.db.GetNamespaces()
 
 	rootMap, err := s.generateOpenAPIMap(namespaces)
