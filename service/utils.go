@@ -22,7 +22,7 @@ func (p *Payload) wrap() (content []byte, err error) {
 func respondWithJSON(w http.ResponseWriter, code int, jsonContent string) {
 	w.Header().Set("Content-Type", "application/json")
 
-	w.WriteHeader(code)
+	// w.WriteHeader(code)
 	_, err := w.Write([]byte(jsonContent))
 	if err != nil {
 		log.Println("error sending response: ", err)
